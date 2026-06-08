@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Endo-DSL runtime artifacts
+*.sqlite3
+*.db
+data/
+workspace/
+prototypes_out/
+.endo_dsl/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/endo-dsl-language/
+*.swp
