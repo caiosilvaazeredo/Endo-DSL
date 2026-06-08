@@ -1,172 +1,212 @@
 # Endo-DSL
 
-**Plataforma de design de jogos educativos** baseada em DSL declarativa e taxonomia de Bloom.
+**Plataforma de design de jogos educativos baseada em DSL e taxonomia de Bloom**
 
-Desenvolvida como parte da pesquisa de doutorado no PESC/COPPE/UFRJ — Caio Azeredo.
+Endo-DSL é uma plataforma de pesquisa desenvolvida no PESC/COPPE/UFRJ para a geração
+semi-automática de protótipos de jogos educativos HTML5 a partir de uma linguagem de
+domínio específico (DSL) estruturada pela taxonomia revisada de Bloom.
 
----
-
-## Visão Geral
-
-A Endo-DSL permite que designers educacionais e educadores criem especificações formais de jogos sérios usando uma linguagem de domínio específico (DSL) alinhada à Taxonomia de Bloom. A plataforma automatiza:
-
-- Recuperação semântica de componentes pedagógicos reutilizáveis
-- Geração de especificações DSL via pipeline multi-agente (com LLM opcional)
-- Compilação para protótipos HTML5 jogáveis (zero dependências externas)
-- Avaliação pedagógica multidimensional com relatórios comparativos
-- Curadoria colaborativa da biblioteca de componentes
+O sistema integra recuperação de componentes pedagógicos (RAG), geração de código de jogo
+por LLM opcional, compilação para HTML5 puro (zero dependências externas em runtime) e
+avaliação multidimensional de protótipos.
 
 ---
 
 ## Requisitos
 
-- Python 3.11+
-- Sem dependências obrigatórias (stdlib apenas)
-- Opcional: `anthropic` para geração via LLM
+- Python 3.11 ou superior
+- Nenhuma dependência externa obrigatória (stdlib apenas)
+- Opcional: `anthropic>=0.25` para geração via Claude
 
 ---
 
 ## Instalação
 
 ```bash
-git clone https://github.com/caiosilvaazeredo/endo-dsl.git
-cd endo-dsl
+# 1. Clone o repositório
+git clone https://github.com/caiosazeredo/Endo-DSL.git
+cd Endo-DSL
+
+# 2. Crie e ative um ambiente virtual
+python -m venv .venv
+source .venv/bin/activate        # Linux/macOS
+# .venv\Scripts\activate         # Windows
+
+# 3. Instale em modo editável (sem dependências externas)
 pip install -e .
 
-# Com suporte a LLM (Claude API):
+# 4. (Opcional) Instale suporte a LLM via Anthropic
 pip install -e ".[llm]"
-export ANTHROPIC_API_KEY=sk-...
 ```
 
 ---
 
-## Uso Rápido
+## Quick Start
 
-### Interface Web
+### Interface web
 
 ```bash
-endo-dsl serve
-# Acesse http://localhost:8000
+# Inicializa o banco de dados e inicia o servidor
+endo-dsl serve --host 0.0.0.0 --port 8000
+
+# Acesse em: http://localhost:8000
 ```
 
-### Demonstração completa (linha de comando)
+### CLI — compilar um arquivo DSL
 
 ```bash
-endo-dsl demo
-```
-
-### Compilar um arquivo `.endo`
-
-```bash
+# Compila e gera um protótipo HTML5 em ./prototypes/
 endo-dsl compile examples/fracoes.endo
-# Gera: prototypes/<uuid>/index.html
+
+# Compila com saída em diretório específico
+endo-dsl compile examples/fracoes.endo --out ./meu-jogo/
 ```
 
-### Validar sintaxe e semântica
+### CLI — validar sintaxe e semântica
 
 ```bash
 endo-dsl validate examples/fracoes.endo
 ```
 
-### Biblioteca de componentes
+### CLI — inicializar banco de dados
 
 ```bash
-endo-dsl library                        # lista todos
-endo-dsl library --bloom Analisar       # filtrar por Bloom
-endo-dsl library --type quiz            # filtrar por tipo
+endo-dsl init-db
+```
+
+### CLI — popular biblioteca de componentes
+
+```bash
+endo-dsl seed-components
+```
+
+### CLI — executar curadoria de componentes
+
+```bash
+endo-dsl curate --status pending
 ```
 
 ---
 
-## Linguagem DSL
+## Fluxo do Studio (6 Fases)
 
-A DSL segue a gramática EBNF em `endo_dsl/dsl/grammar.ebnf`.
+```
+Fase 1 → Contexto    : domínio, tópico, nível Bloom, faixa etária, duração
+Fase 2 → Recuperação : busca de componentes pedagógicos na biblioteca (RAG)
+Fase 3 → Geração     : geração da DSL com base no contexto + componentes
+Fase 4 → Revisão     : edição manual da DSL com validação ao vivo
+Fase 5 → Compilação  : geração do protótipo HTML5 e métricas
+Fase 6 → Avaliação   : avaliação multidimensional do protótipo
+```
 
-```endo
-game "Nome do Jogo" {
+Acesse `/studio` na interface web para percorrer o fluxo completo.
+
+---
+
+## Estrutura do Projeto
+
+```
+Endo-DSL/
+├── endo_dsl/
+│   ├── cli.py               # Ponto de entrada CLI
+│   ├── db/
+│   │   └── schema.sql       # Schema SQLite
+│   ├── dsl/
+│   │   ├── grammar.ebnf     # Gramática EBNF da DSL
+│   │   ├── parser.py        # Parser recursivo descendente
+│   │   └── validator.py     # Validação sintática e semântica
+│   ├── rag/
+│   │   └── retriever.py     # Recuperação por similaridade
+│   ├── compiler/
+│   │   └── html5.py         # Compilador DSL → HTML5
+│   └── web/
+│       ├── server.py        # Servidor HTTP (stdlib apenas)
+│       ├── views.py         # Templates HTML
+│       └── static/
+│           ├── app.css      # Estilos da interface
+│           ├── studio.js    # Lógica do studio (fases 1-6)
+│           ├── curator.js   # Curadoria de componentes
+│           └── evaluate.js  # Formulário de avaliação
+├── examples/
+│   └── fracoes.endo         # Exemplo: Comparando Frações (Bloom: Analisar)
+├── pyproject.toml
+└── README.md
+```
+
+---
+
+## Sintaxe DSL — Resumo
+
+```
+game "<título>" {
   metadata {
-    domain: "Matemática"
-    bloom: Analisar
-    age_range: "10-11"
-    duration: 15
+    domain:    "<área>"
+    topic:     "<tópico>"
+    bloom:     Lembrar | Compreender | Aplicar | Analisar | Avaliar | Criar
+    age_range: "<faixa>"
+    duration:  <minutos>
   }
 
-  objective "Descreva o objetivo de aprendizagem"
+  objective "<descrição do objetivo de aprendizagem>"
 
-  mechanic nome_mecanica {
-    type: quiz          // quiz | classify | order | match | ...
-    bloom: Lembrar
-    params {
-      questions: 5
-      attempts: 2
-    }
+  mechanic <id> {
+    type:  quiz | classify | sort | match | drag | build | simulate
+    bloom: <nível>
+    params { <chave>: <valor> ... }
   }
 
   loop {
-    start -> nome_mecanica
-    nome_mecanica -> end
+    start -> <mechanic_id>
+    <mechanic_id> -> <mechanic_id> [ condition: "<expr>" ]
+    <mechanic_id> -> end
   }
 }
 ```
 
-### Tipos de mecânicas suportados
+---
 
-| Tipo | Bloom afins |
-|------|------------|
-| `quiz` | Lembrar, Compreender |
-| `classify` | Analisar |
-| `order` | Aplicar, Analisar |
-| `match` | Compreender, Aplicar |
-| `simulation` | Aplicar, Criar |
-| `debate` | Avaliar, Criar |
-| `portfolio` | Criar |
-| ... | |
+## Níveis de Bloom Suportados
+
+| Nível        | Cor        | Verbos típicos                          |
+|--------------|------------|-----------------------------------------|
+| Lembrar      | Azul       | identificar, reconhecer, listar         |
+| Compreender  | Teal       | explicar, classificar, resumir          |
+| Aplicar      | Verde      | usar, resolver, demonstrar              |
+| Analisar     | Amarelo    | comparar, diferenciar, organizar        |
+| Avaliar      | Laranja    | julgar, criticar, justificar            |
+| Criar        | Vermelho   | construir, planejar, produzir           |
 
 ---
 
-## Arquitetura
+## API HTTP (servidor embutido)
 
-```
-endo_dsl/
-├── dsl/           # Parser, validador semântico, AST, gramática
-├── db/            # SQLite (schema.sql, Database)
-├── library/       # Repositório de componentes, busca, curadoria
-├── agents/        # Pipeline multi-agente (recuperação → geração → validação)
-├── compiler/      # Compilador → HTML5, rastreabilidade, reparametrização
-├── evaluation/    # Instrumento Likert 7D, relatórios comparativos
-├── web/           # Servidor HTTP (stdlib), views HTML, assets estáticos
-├── platform.py    # Fachada unificada da plataforma
-├── cli.py         # Interface de linha de comando
-└── demo.py        # Demonstração ponta-a-ponta
-```
+| Método | Endpoint                        | Descrição                              |
+|--------|---------------------------------|----------------------------------------|
+| POST   | `/api/session`                  | Cria sessão com contexto               |
+| POST   | `/api/retrieve`                 | Recupera componentes (RAG)             |
+| POST   | `/api/generate`                 | Gera DSL                               |
+| POST   | `/api/validate`                 | Valida DSL (sintaxe + semântica)       |
+| POST   | `/api/compile`                  | Compila DSL → protótipo HTML5          |
+| POST   | `/api/reparametrize`            | Reparametriza protótipo existente      |
+| POST   | `/api/evaluate`                 | Registra avaliação de protótipo        |
+| POST   | `/api/curate`                   | Ação de curadoria em componente        |
+| GET    | `/prototype/<pid>`              | Jogo HTML5 compilado                   |
+| GET    | `/prototype/<pid>/traceability` | Rastreabilidade pedagógica             |
+| GET    | `/evaluate/<pid>`               | Formulário de avaliação                |
 
 ---
 
-## Requisitos Funcionais Implementados
+## Pesquisa
 
-| RF | Descrição |
-|----|-----------|
-| RF01 | Gramática EBNF formal |
-| RF02 | Taxonomia de Bloom como construto de primeira classe |
-| RF03 | Parser com mensagens de erro descritivas |
-| RF04 | Validador semântico (coerência Bloom × tipo de mecânica) |
-| RF05 | Estúdio web com validação em tempo real |
-| RF06 | Documentação de limites da gramática |
-| RF07–RF12 | Biblioteca de componentes com CRUD, busca, versionamento, curadoria |
-| RF13 | Estruturação do contexto de design (DesignContext) |
-| RF14 | Recuperação semântica por similaridade |
-| RF15–RF16 | Geração de DSL via pipeline multi-agente |
-| RF17 | Loop iterativo de refinamento com histórico |
-| RF18 | Métricas de geração |
-| RF19–RF21 | Compilação para protótipo HTML5 jogável |
-| RF22 | Reparametrização de domínio |
-| RF23 | Rastreabilidade (DSL → protótipo) |
-| RF24 | Instrumento de avaliação pedagógica (7 dimensões) |
-| RF25 | Armazenamento e exportação de avaliações |
-| RF26 | Relatórios comparativos (auto × manual, Bloom, domínio) |
+Este sistema é parte da dissertação de mestrado desenvolvida no
+**Programa de Engenharia de Sistemas e Computação (PESC)**,
+**COPPE/Universidade Federal do Rio de Janeiro (UFRJ)**.
+
+- Instituição: COPPE/UFRJ — PESC
+- Contato: caiosazeredo@cos.ufrj.br
 
 ---
 
 ## Licença
 
-MIT — veja [LICENSE](LICENSE) para detalhes.
+MIT License — veja o arquivo `LICENSE` para detalhes.
