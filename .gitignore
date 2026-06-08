@@ -14,6 +14,7 @@ env/
 *.db
 data/
 workspace/
+prototypes/
 prototypes_out/
 .endo_dsl/
 

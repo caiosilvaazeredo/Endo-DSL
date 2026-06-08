@@ -11,11 +11,16 @@ game "Comparando Frações" {
     duration: 15
   }
 
-  objective "Comparar frações com denominadores diferentes usando equivalência"
+  objective obj_comparar {
+    description: "Comparar frações com denominadores diferentes usando equivalência"
+    bloom: Analisar
+  }
 
   mechanic comparacao {
-    type: classify
+    type: classification
     bloom: Analisar
+    addresses: obj_comparar
+    description: "O jogador classifica pares de frações em maior, menor ou igual."
     params {
       items: 6
       feedback: immediate
@@ -25,15 +30,19 @@ game "Comparando Frações" {
   mechanic revisao {
     type: quiz
     bloom: Lembrar
+    description: "Rodada de revisão para fixação dos conceitos."
     params {
       questions: 4
       attempts: 2
     }
   }
 
-  loop {
-    start -> comparacao
-    comparacao -> revisao [ condition: "score >= 0.6" ]
-    revisao -> end
+  loop principal {
+    bloom: Analisar
+    description: "Classificar e revisar até consolidar a comparação."
+    steps {
+      comparacao -> revisao
+      revisao -> comparacao
+    }
   }
 }

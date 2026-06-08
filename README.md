@@ -147,18 +147,23 @@ game "<título>" {
     duration:  <minutos>
   }
 
-  objective "<descrição do objetivo de aprendizagem>"
+  objective <id> {
+    description: "<descrição do objetivo de aprendizagem>"
+    bloom:       <nível>
+  }
 
   mechanic <id> {
-    type:  quiz | classify | sort | match | drag | build | simulate
-    bloom: <nível>
+    type:      quiz | classification | sequencing | matching | puzzle | comparison | ...
+    bloom:     <nível>
+    addresses: <objective_id>
     params { <chave>: <valor> ... }
   }
 
-  loop {
-    start -> <mechanic_id>
-    <mechanic_id> -> <mechanic_id> [ condition: "<expr>" ]
-    <mechanic_id> -> end
+  loop <id> {
+    bloom: <nível>
+    steps {
+      <mechanic_id> -> <mechanic_id>
+    }
   }
 }
 ```
