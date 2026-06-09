@@ -13,6 +13,7 @@ from endo_dsl.evaluation.instrument import DIMENSIONS
 NAV = [
     ("/",         "Início"),
     ("/studio",   "Estúdio"),
+    ("/gdc",      "GDC Canvas"),
     ("/library",  "Biblioteca"),
     ("/curator",  "Curadoria"),
     ("/report",   "Relatórios"),
@@ -629,6 +630,199 @@ def evaluate_page(proto: Dict[str, Any]) -> str:
 </form>
 <script src="/static/evaluate.js"></script>"""
     return layout("Avaliação", body, "/report")
+
+
+# --------------------------------------------------------------------------- #
+# GDC Canvas
+# --------------------------------------------------------------------------- #
+def gdc_page() -> str:
+    bloom_levels = [
+        ("lembrar",     "Lembrar"),
+        ("compreender", "Compreender"),
+        ("aplicar",     "Aplicar"),
+        ("analisar",    "Analisar"),
+        ("avaliar",     "Avaliar"),
+        ("criar",       "Criar"),
+    ]
+    bloom_chips = "".join(
+        f'<button class="bloom-chip" data-level="{lvl}" '
+        f'onclick="GDC.toggleBloom(\'{lvl}\')">{label}</button>'
+        for lvl, label in bloom_levels
+    )
+    game_types = [
+        ("trilha",     "Trilha 🎯"),
+        ("quiz_battle","Quiz Battle ⚡"),
+        ("memoria",    "Jogo da Memória 🧠"),
+        ("xadrez",     "Xadrez/Damas ♟️"),
+        ("cartas",     "Jogo de Cartas 🃏"),
+        ("livre",      "Livre ✏️"),
+    ]
+    type_btns = "".join(
+        f'<button class="game-type-btn" data-type="{t}" '
+        f'onclick="GDC.setGameType(\'{t}\')">{label}</button>'
+        for t, label in game_types
+    )
+    dur_btns = "".join(
+        f'<button class="duration-btn" data-dur="{d}" '
+        f'onclick="GDC.setDuration({d})">{d} min</button>'
+        for d in [15, 30, 45, 60]
+    )
+
+    def section(css_pos: str, color: str, icon: str, title: str, section_id: str,
+                extra: str = "") -> str:
+        return f"""
+<div class="gdc-section {color} {css_pos}">
+  <div class="gdc-section-title"><span class="icon">{icon}</span>{esc(title)}</div>
+  <ul class="gdc-bullet-list" id="bullets-{section_id}"></ul>
+  <button class="gdc-add-bullet" onclick="GDC.addBullet('{section_id}')">+ Adicionar</button>
+  {extra}
+</div>"""
+
+    objectives_extra = f"""
+<div class="bloom-suggest" id="bloom-suggest-text"></div>
+<div class="bloom-chips">{bloom_chips}</div>"""
+
+    game_section = f"""
+<div class="gdc-section yellow gdc-game">
+  <div class="gdc-section-title"><span class="icon">🎮</span>Jogo</div>
+  <div class="game-type-selector">{type_btns}</div>
+  <div class="gdc-controls">
+    <div class="gdc-control-group">
+      <label>Jogadores</label>
+      <div style="display:flex;align-items:center;gap:.4rem">
+        <input type="range" id="gdc-player-slider" min="2" max="6" value="2"
+               style="width:80px">
+        <span id="gdc-player-label" style="font-weight:700">2</span>
+      </div>
+    </div>
+    <div class="gdc-control-group">
+      <label>Duração</label>
+      <div class="duration-btns">{dur_btns}</div>
+    </div>
+  </div>
+  <div class="mda-subsections">
+    <div class="mda-sub">
+      <div class="mda-sub-title">A — Aesthetics (estética)</div>
+      <div class="mda-hint" id="mda-hint-a"></div>
+      <ul class="gdc-bullet-list" id="bullets-mda_a"></ul>
+      <button class="gdc-add-bullet" onclick="GDC.addBullet('mda_a')">+ Adicionar</button>
+    </div>
+    <div class="mda-sub">
+      <div class="mda-sub-title">D — Dynamics (dinâmicas)</div>
+      <div class="mda-hint" id="mda-hint-d"></div>
+      <ul class="gdc-bullet-list" id="bullets-mda_d"></ul>
+      <button class="gdc-add-bullet" onclick="GDC.addBullet('mda_d')">+ Adicionar</button>
+    </div>
+    <div class="mda-sub">
+      <div class="mda-sub-title">M — Mechanics (mecânicas)</div>
+      <div class="mda-hint" id="mda-hint-m"></div>
+      <div class="mechanics-selector">
+        <input type="text" class="mechanics-search" id="mechanics-search"
+               placeholder="Buscar mecânicas…"
+               oninput="GDC.filterMechanics(this.value)"
+               onfocus="GDC.toggleMechanicsDropdown()">
+        <div class="mechanics-dropdown" id="mechanics-dropdown"></div>
+      </div>
+      <div class="selected-mechanics" id="selected-mechanics"></div>
+      <ul class="gdc-bullet-list" id="bullets-mda_m"></ul>
+      <button class="gdc-add-bullet" onclick="GDC.addBullet('mda_m')">+ Adicionar</button>
+    </div>
+  </div>
+</div>"""
+
+    canvas = f"""
+<div class="gdc-canvas" id="gdc-canvas-root">
+
+  <!-- Row 1: header -->
+  <div class="gdc-header-title">
+    <label>Jogo:</label>
+    <input type="text" id="gdc-title-input" placeholder="Título do jogo…">
+  </div>
+  <div class="gdc-header-meta">
+    <label>Versão</label>
+    <input type="text" id="gdc-version-input" placeholder="1.0">
+    <label>Domínio</label>
+    <input type="text" id="gdc-domain-input" placeholder="ex.: Matemática">
+    <label>Tópico</label>
+    <input type="text" id="gdc-topic-input" placeholder="ex.: Frações">
+  </div>
+  <div class="gdc-header-type">
+    <label>Tipo</label>
+    <span style="font-size:.9rem;font-weight:700">🎮 Tabuleiro</span>
+    <label style="margin-top:.4rem">Data</label>
+    <input type="date" id="gdc-date-input">
+  </div>
+
+  <!-- Row 2: Situação | Jogador -->
+  {section("gdc-situation","orange","🏠","Situação","situation")}
+  {section("gdc-player","orange","😊","Jogador/Aluno","player")}
+
+  <!-- Row 3: Objetivos | Narrativa -->
+  {section("gdc-objectives","green","📚","Objetivos de Aprendizado","objectives",objectives_extra)}
+  {section("gdc-narrative","blue","📖","Narrativa","narrative")}
+
+  <!-- Row 4: Processo | Jogo (MDA) | Objetivos do Jogo -->
+  {section("gdc-process","green","📝","Processo Lúdico de Aprendizado","process")}
+  {game_section}
+  {section("gdc-game-objectives","blue","🎯","Objetivos do Jogo","game_objectives")}
+
+  <!-- Row 5: Inspirações | Restrições -->
+  {section("gdc-inspirations","yellow","💡","Inspirações","inspirations")}
+  {section("gdc-restrictions","red","⚠️","Restrições","restrictions")}
+
+  <!-- Footer -->
+  <div class="gdc-footer gdc-footer-bar">
+    ENDO-GDC &middot; PESC/COPPE/UFRJ &middot; Jogos Educacionais Endógenos
+  </div>
+</div>"""
+
+    toolbar = """
+<div class="gdc-toolbar">
+  <button class="btn lg" id="btn-generate-proto" onclick="GDC.generatePrototype()">
+    ▶ Gerar Protótipo</button>
+  <button class="btn ghost" id="btn-gen-dsl" onclick="GDC.generateDSL()">
+    &lt;/&gt; Gerar DSL</button>
+  <span class="sep"></span>
+  <button class="btn ghost sm" onclick="GDC.saveJSON()">&#8595; Salvar GDC</button>
+  <label class="btn ghost sm" style="cursor:pointer">
+    &#8593; Carregar GDC
+    <input type="file" accept=".json" style="display:none"
+           onchange="GDC.loadJSON(this)">
+  </label>
+  <button class="btn ghost sm" onclick="GDC.exportHTML()">&#128196; Exportar HTML</button>
+  <span class="sep"></span>
+  <button class="btn ghost sm" onclick="window.print()">🖨️ Imprimir</button>
+</div>"""
+
+    dsl_modal = """
+<div class="gdc-modal-overlay hidden" id="dsl-modal">
+  <div class="gdc-modal">
+    <div class="gdc-modal-header">
+      <h3>&lt;/&gt; DSL Gerada</h3>
+    </div>
+    <div class="gdc-modal-body">
+      <pre id="dsl-modal-content"></pre>
+    </div>
+    <div class="gdc-modal-footer">
+      <button class="btn ghost sm" id="btn-copy-dsl" onclick="GDC.copyDSL()">Copiar</button>
+      <button class="btn ghost sm" onclick="GDC.closeDSLModal()">Fechar</button>
+    </div>
+  </div>
+</div>"""
+
+    body = f"""
+<div class="gdc-page">
+  <h1 style="margin-bottom:.3rem">ENDO-GDC — Game Design Canvas</h1>
+  <p class="muted" style="margin-bottom:.8rem">Canvas interativo para design de jogos educacionais de tabuleiro.
+     Todos os campos são editáveis.</p>
+  {toolbar}
+  {canvas}
+</div>
+{dsl_modal}
+<link rel="stylesheet" href="/static/gdc.css">
+<script src="/static/gdc.js"></script>"""
+
+    return layout("GDC Canvas", body, "/gdc")
 
 
 # --------------------------------------------------------------------------- #

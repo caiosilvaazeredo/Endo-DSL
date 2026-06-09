@@ -265,6 +265,151 @@ def api_report(p: Platform, m, q, body) -> Response:
 
 
 # --------------------------------------------------------------------------- #
+# Board Game / GDC routes
+# --------------------------------------------------------------------------- #
+@route("GET", "/gdc")
+def gdc(p: Platform, m, q, body) -> Response:
+    return _html(views.gdc_page())
+
+
+@route("GET", "/api/boardgame/mechanics")
+def api_boardgame_mechanics(p: Platform, m, q, body) -> Response:
+    try:
+        from endo_dsl.boardgame.mechanics import MECHANICS_CATALOG
+        import dataclasses
+        serializable = {k: dataclasses.asdict(v) if dataclasses.is_dataclass(v) else v
+                        for k, v in MECHANICS_CATALOG.items()}
+        return _json(serializable)
+    except ImportError:
+        return _json({})
+
+
+@route("POST", "/api/boardgame/gdc-to-dsl")
+def api_gdc_to_dsl(p: Platform, m, q, body) -> Response:
+    try:
+        from endo_dsl.boardgame.templates import generate_template
+        gdc_data = body.get("gdc", {})
+        game_type = gdc_data.get("game_type", "trilha")
+        ctx = {
+            "title": gdc_data.get("title", "Meu Jogo"),
+            "domain": gdc_data.get("domain", "Geral"),
+            "topic": gdc_data.get("topic", ""),
+            "bloom_target": (gdc_data.get("bloom_levels") or ["Aplicar"])[0],
+            "age_range": gdc_data.get("age_range", "10-12"),
+            "players": str(gdc_data.get("player_count", "2-4")),
+            "duration": gdc_data.get("duration", 30),
+            "objective_text": " ".join(gdc_data.get("learning_objectives", [])),
+        }
+        dsl = generate_template(game_type, ctx)
+        return _json({"ok": True, "dsl": dsl, "template_used": game_type})
+    except Exception as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+
+
+@route("POST", "/api/boardgame/generate")
+def api_boardgame_generate(p: Platform, m, q, body) -> Response:
+    try:
+        from endo_dsl.boardgame.templates import generate_template
+        from endo_dsl.boardgame.compiler import compile_boardgame_source
+        gdc_data = body.get("gdc", {})
+        game_type = gdc_data.get("game_type", "trilha")
+        ctx = {
+            "title": body.get("title", gdc_data.get("title", "Meu Jogo")),
+            "domain": body.get("domain", gdc_data.get("domain", "Geral")),
+            "topic": gdc_data.get("topic", ""),
+            "bloom_target": (gdc_data.get("bloom_levels") or ["Aplicar"])[0],
+            "age_range": gdc_data.get("age_range", "10-12"),
+            "players": str(body.get("players", gdc_data.get("player_count", "2-4"))),
+            "duration": gdc_data.get("duration", 30),
+            "objective_text": " ".join(gdc_data.get("learning_objectives", [])),
+        }
+        dsl = body.get("dsl") or generate_template(game_type, ctx)
+        result = compile_boardgame_source(dsl, domain=ctx["domain"], topic=ctx["topic"])
+
+        # Persist to DB
+        import json as _json_mod
+        import datetime
+        html = result["html"]
+        trace_json = _json_mod.dumps(result["traceability"])
+        bloom_json = _json_mod.dumps([ctx["bloom_target"]])
+        now = datetime.datetime.utcnow().isoformat()
+        # Save HTML to a temp path and store path reference
+        import tempfile, os
+        tmpdir = Path(tempfile.gettempdir()) / "endo_boardgames"
+        tmpdir.mkdir(exist_ok=True)
+        # Insert spec first to get a spec_id
+        spec_cur = p.db.execute(
+            "INSERT INTO specifications (session_id, title, dsl_source, origin, parsed_ok, created_at)"
+            " VALUES (?,?,?,?,?,?)",
+            (None, ctx["title"], dsl, "manual", 1, now)
+        )
+        spec_id = spec_cur.lastrowid
+        html_path = str(tmpdir / f"boardgame_{spec_id}.html")
+        Path(html_path).write_text(html, encoding="utf-8")
+        bid_cur = p.db.execute(
+            "INSERT INTO prototypes (spec_id, title, html_path, traceability_json, bloom_levels_json, origin, compiled_ok, created_at)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (spec_id, ctx["title"], html_path, trace_json, bloom_json, "manual", 1, now)
+        )
+        bid = bid_cur.lastrowid
+        return _json({"ok": True, "prototype_id": bid,
+                      "html_url": f"/boardgame/{bid}",
+                      "metadata": result["metadata"]})
+    except Exception as exc:
+        import traceback as _tb
+        return _json({"ok": False, "error": str(exc), "trace": _tb.format_exc()}, 400)
+
+
+@route("GET", "/boardgame/<bid>")
+def serve_boardgame(p: Platform, m, q, body) -> Response:
+    try:
+        row = p.db.query_one("SELECT html_path FROM prototypes WHERE id = ?", (int(m["bid"]),))
+        if not row or not row["html_path"]:
+            return _html(views.not_found("Jogo de tabuleiro não encontrado"), 404)
+        html_file = Path(row["html_path"])
+        if not html_file.exists():
+            return _html(views.not_found("Arquivo do jogo não encontrado"), 404)
+        return _html(html_file.read_text(encoding="utf-8"))
+    except Exception:
+        return _html(views.not_found("Jogo não encontrado"), 404)
+
+
+@route("POST", "/api/boardgame/compile-dsl")
+def api_boardgame_compile_dsl(p: Platform, m, q, body) -> Response:
+    try:
+        from endo_dsl.boardgame.compiler import compile_boardgame_source
+        dsl = body.get("dsl", "")
+        domain = body.get("domain", "generico")
+        result = compile_boardgame_source(dsl, domain=domain)
+        html = result["html"]
+        import json as _json_mod, datetime, tempfile
+        now = datetime.datetime.utcnow().isoformat()
+        tmpdir = Path(tempfile.gettempdir()) / "endo_boardgames"
+        tmpdir.mkdir(exist_ok=True)
+        bloom_v = result["metadata"].get("bloom", "")
+        sc = p.db.execute(
+            "INSERT INTO specifications (session_id, title, dsl_source, origin, parsed_ok, created_at)"
+            " VALUES (?,?,?,?,?,?)",
+            (None, result["metadata"]["title"], dsl, "manual", 1, now)
+        )
+        spec_id = sc.lastrowid
+        html_path = str(tmpdir / f"boardgame_{spec_id}.html")
+        Path(html_path).write_text(html, encoding="utf-8")
+        bc = p.db.execute(
+            "INSERT INTO prototypes (spec_id, title, html_path, traceability_json, bloom_levels_json, origin, compiled_ok, created_at)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (spec_id, result["metadata"]["title"], html_path,
+             _json_mod.dumps(result["traceability"]),
+             _json_mod.dumps([bloom_v]), "manual", 1, now)
+        )
+        bid = bc.lastrowid
+        return _json({"ok": True, "html_size": len(html),
+                      "prototype_id": bid, "html_url": f"/boardgame/{bid}"})
+    except Exception as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+
+
+# --------------------------------------------------------------------------- #
 def _first(q: Dict[str, List[str]], key: str) -> Optional[str]:
     vals = q.get(key)
     return vals[0] if vals else None
