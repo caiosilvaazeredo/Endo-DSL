@@ -7,10 +7,20 @@ execução**.
 
 | Variante | Dependências | Banco de dados | Alvo | Tamanho | Caso de uso |
 |---|---|---|---|---|---|
-| **Plataforma completa** (`endo_dsl` inteiro) | stdlib + subsistemas (web, library, agents) | **SQLite** | servidor / desktop com Python | pacote completo | autoria interativa, pipeline LLM, pesquisa |
+| **Plataforma completa** (`endo_dsl` inteiro) | stdlib + subsistemas (web, library, agents, boardgame) | **SQLite** | servidor / desktop com Python | pacote completo | autoria interativa, pipeline LLM, canvas ENDO-GDC, jogos de tabuleiro, pesquisa |
 | **`compiler-only`** | só stdlib do Python ≥ 3.10 | **nenhum** | qualquer Python (CLI/CI/batch) | ~105 KB (`standalone.py`) | compilar em lote, embarcar, CI, base das outras builds |
 | **`browser`** (Pyodide) | Pyodide (WASM, CDN) + payload local | **nenhum** | navegador, 100% client-side | payload ~33 KB + runtime Pyodide | demo/uso estático sem servidor (GitHub Pages) |
 | **`native`** (Nuitka) | nenhuma em runtime (CPython embutido) | **nenhum** | binário desktop (Linux/Win/macOS) | ~15,8 MB (binário onefile) | entregar a usuários sem Python instalado |
+
+## Recursos de jogos de tabuleiro (boardgame)
+
+A plataforma completa inclui o módulo `endo_dsl.boardgame` com:
+
+- Canvas **ENDO-GDC** interativo (`/gdc`) — 8 seções pedagógicas coloridas
+- **25 mecânicas** catalogadas de jogos reais (Catan, Cluedo, Dominion, Risk, Pandemic…)
+- **8 arquétipos** de jogo: `trilha`, `quiz_battle`, `memory_match`, `word_race`, `strategy_grid`, `cooperative_quest`, `auction_economy`, `deduction_mystery`
+- Pipeline Canvas → DSL `boardgame{}` → HTML5 jogável auto-contido
+- CLI com suporte a `--boardgame` e `--template <arquétipo>` (ver `endo-dslc --help`)
 
 ## Resumo
 

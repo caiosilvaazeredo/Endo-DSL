@@ -38,13 +38,26 @@ endo-dslc examples/fracoes.endo -o jogo.html
 ## Uso (CLI `endo-dslc`)
 
 ```bash
+# DSL educativo padrão
 endo-dslc entrada.endo                  # escreve ./entrada.html ao lado da entrada
 endo-dslc entrada.endo -o jogo.html     # define o arquivo de saída
 cat entrada.endo | endo-dslc -          # lê da entrada padrão (stdin)
 endo-dslc entrada.endo --trace          # também grava o doc. de rastreabilidade (RF23)
 endo-dslc entrada.endo --check          # apenas valida (parse + semântica), sem escrever
 endo-dslc entrada.endo --no-strict      # gera mesmo com erros semânticos
+
+# Jogos de tabuleiro — compilar DSL boardgame{}
+endo-dslc jogo.endo --boardgame         # compila bloco boardgame{} -> HTML5
+endo-dslc jogo.endo --boardgame --domain Ciências --topic ecossistemas
+
+# Jogos de tabuleiro — gerar a partir de arquétipo (sem arquivo .endo)
+endo-dslc --template trilha -o trilha.html
+endo-dslc --template quiz_battle --domain Matemática --topic frações --players 4
+endo-dslc --template memory_match --bloom Lembrar --title "Memória de Biomas"
 ```
+
+Arquétipos disponíveis: `trilha`, `quiz_battle`, `memory_match`, `word_race`,
+`strategy_grid`, `cooperative_quest`, `auction_economy`, `deduction_mystery`.
 
 Códigos de saída: `0` sucesso · `1` erro de compilação · `2` erro de E/S.
 

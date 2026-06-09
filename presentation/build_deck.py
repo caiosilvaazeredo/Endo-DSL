@@ -281,7 +281,8 @@ def slide_agenda():
         ("05", "Proposta Endo-DSL", "Arquitetura de 5 módulos e seus papéis"),
         ("06", "Jornada & Estudo de caso", "Fluxo do usuário e 'Comparando Frações'"),
         ("07", "Metodologia", "Design Science Research e protocolo experimental"),
-        ("08", "Resultados & Cronograma", "Prova de conceito, contribuições e plano"),
+        ("08", "Jogos de tabuleiro", "ENDO-GDC canvas · 25 mecânicas · protótipos HTML5"),
+
     ]
     cw = Inches(5.95); ch = Inches(1.18); gx = Inches(0.33); gy = Inches(0.22)
     for i, (num, ti, sub) in enumerate(cols):
@@ -1508,7 +1509,273 @@ def slide_tese():
 
 
 # --------------------------------------------------------------------------- #
-# SLIDE 34 — Conclusão e próximos passos
+# SLIDES 34–40 — Extensão: Jogos de Tabuleiro e ENDO-GDC
+# --------------------------------------------------------------------------- #
+
+ORANGE_GDC = RGBColor(0xEA, 0x76, 0x0C)
+GREEN_GDC  = RGBColor(0x16, 0xA3, 0x4A)
+BLUE_GDC   = RGBColor(0x25, 0x63, 0xEB)
+YELLOW_GDC = RGBColor(0xCA, 0x8A, 0x04)
+RED_GDC    = RGBColor(0xDC, 0x26, 0x26)
+
+
+def slide_tabuleiro_motivacao():
+    content_slide(
+        "Extensão: jogos de tabuleiro jogáveis", "Escopo e motivação",
+        [
+            "Jogos de tabuleiro são o formato mais ubíquo de jogo educativo presencial — "
+            "trilhas, batalhas de perguntas, memória, dedução.",
+            "O canvas ENDO-GDC (Game Design Canvas) permite que o educador preencha as 8 "
+            "seções pedagógicas e obtenha um protótipo HTML5 jogável sem programar.",
+            "O escopo inicial cobre os jogos de tabuleiro mais conhecidos mundialmente: "
+            "Catan, Uno, Monopoly, Cluedo, Scrabble, Risk, Dominion, Carcassonne, Pandemic…",
+            "A abordagem MDA (Mechanics–Dynamics–Aesthetics) ancora o design: cada seção do "
+            "canvas mapeia explicitamente para um componente verificável da DSL.",
+            "Pipeline completo: Canvas → DSL boardgame{} → HTML5 auto-contido executável "
+            "no navegador, sem instalação.",
+        ],
+        side=[
+            "Abismo de autoria: também existe em jogos de tabuleiro",
+            "Formato mais acessível para escolas sem laboratório",
+            "25 mecânicas catalogadas de jogos reais",
+            "8 arquétipos de jogos (trilha, quiz battle, memória…)",
+            "Zero dependências externas em runtime",
+        ],
+        side_title="Por quê tabuleiro?",
+    )
+
+
+def slide_tabuleiro_mecanicas():
+    s = new_slide("Catálogo de mecânicas de tabuleiro", "25 mecânicas de jogos reais")
+    l, t, w, _ = body_area()
+    mecanicas = [
+        ("Gerenciamento de recursos", "Catan"),
+        ("Dedução de mistério",       "Cluedo"),
+        ("Construção de deck",        "Dominion"),
+        ("Área de controle",          "Risk"),
+        ("Cooperação",                "Pandemic"),
+        ("Colocação de peças",        "Carcassonne"),
+        ("Formação de palavras",      "Scrabble"),
+        ("Leilão econômico",          "Monopoly"),
+        ("Jogo de cartas",            "Uno"),
+        ("Quiz educativo",            "Trivial P."),
+        ("Trilha com perguntas",      "Quiz Trail"),
+        ("Correspondência par-a-par", "Memória"),
+        ("Sequenciamento",            "Timeline"),
+        ("Classificação",             "Sort It"),
+        ("Montagem de puzzle",        "Puzzle Edu"),
+    ]
+    cols = 3
+    cw = Inches(3.95); ch = Inches(0.72)
+    gx = Inches(0.21); gy = Inches(0.14)
+    per_col = (len(mecanicas) + cols - 1) // cols
+    for i, (mec, jogo) in enumerate(mecanicas):
+        col = i // per_col
+        row = i % per_col
+        x = l + col * (cw + gx)
+        y = t + row * (ch + gy)
+        box(s, x, y, cw, ch, fill=CARD, rounded=True, shadow=True)
+        box(s, x, y, Inches(0.1), ch, fill=INDIGO)
+        text(s, x + Inches(0.25), y + Inches(0.06), cw - Inches(0.35), ch - Inches(0.12), [
+            [(mec, 13.5, INK, True, FONT, False)],
+            [(f"ex.: {jogo}", 11, GRAY, False, FONT, True)],
+        ], anchor=MSO_ANCHOR.MIDDLE, space_after=1)
+    text(s, l, t + per_col * (ch + gy) + Inches(0.05), w, Inches(0.35),
+         [[("+ 10 mecânicas adicionais na biblioteca (comparação, economia, exploração…). "
+            "Cada mecânica é uma dataclass com nível Bloom, descrição MDA e parâmetros configuráveis.",
+            12, GRAY, False, FONT, True)]])
+
+
+def slide_tabuleiro_gdc():
+    s = new_slide("Canvas ENDO-GDC", "8 seções — do contexto ao protótipo")
+    l, t, w, _ = body_area()
+    secoes = [
+        ("Situação",   ORANGE_GDC, "domínio, faixa etária, duração"),
+        ("Objetivos",  GREEN_GDC,  "metas de aprendizagem + Bloom"),
+        ("Narrativa",  BLUE_GDC,   "ambientação, personagens, enredo"),
+        ("Mecânicas",  YELLOW_GDC, "M–D–A: tipo, dinâmica, estética"),
+        ("Restrições", RED_GDC,    "regras, limites, penalidades"),
+        ("Conteúdo",   INDIGO,     "banco de perguntas, domínio"),
+        ("Arquétipo",  SLATE_LT,   "trilha / quiz / memória / etc."),
+        ("Avaliação",  GRAY,       "critérios de vitória e Bloom"),
+    ]
+    cw = Inches(2.92); ch = Inches(1.30)
+    gx = Inches(0.20); gy = Inches(0.20)
+    cols = 4
+    for i, (nome, cor, desc) in enumerate(secoes):
+        col = i % cols
+        row = i // cols
+        x = l + col * (cw + gx)
+        y = t + row * (ch + gy)
+        bx = box(s, x, y, cw, ch, fill=cor, rounded=True, shadow=True)
+        # overlay branco semi-transparente (simulated via inner box)
+        box(s, x, y + Inches(0.55), cw, ch - Inches(0.55), fill=NEARWHITE)
+        text(s, x + Inches(0.15), y + Inches(0.08), cw - Inches(0.3), Inches(0.44), [
+            [(nome, 16, WHITE, True, FONT, False)],
+        ], anchor=MSO_ANCHOR.MIDDLE)
+        text(s, x + Inches(0.12), y + Inches(0.60), cw - Inches(0.25), Inches(0.62), [
+            [(desc, 12, INK, False, FONT, False)],
+        ], anchor=MSO_ANCHOR.TOP, space_after=0)
+    text(s, l, t + 2 * (ch + gy) + Inches(0.12), w, Inches(0.42),
+         [[("Preenchendo o canvas → clique 'Gerar Protótipo' → DSL boardgame{} gerada automaticamente "
+            "→ compilação HTML5 → jogo jogável no navegador.",
+            13, GRAY, False, FONT, True)]])
+
+
+def slide_tabuleiro_pipeline():
+    s = new_slide("Pipeline: Canvas → DSL → HTML5", "Fluxo de geração de protótipo")
+    l, t, w, _ = body_area()
+    stages = [
+        ("Canvas\nENDO-GDC", ORANGE_GDC,
+         "Educador preenche as 8 seções no navegador"),
+        ("DSL\nboardgame{}", INDIGO,
+         "Template gera código DSL estruturado por Bloom + MDA"),
+        ("Compilador\nboardgame", GREEN_GDC,
+         "Parser + content_builder monta banco de conteúdo"),
+        ("Protótipo\nHTML5", BLUE_GDC,
+         "board_engine renderiza jogo auto-contido, zero CDN"),
+    ]
+    bw = Inches(2.65); bh = Inches(2.20)
+    arr_gap = Inches(0.38); by = t + Inches(1.2)
+    for i, (lbl, cor, desc) in enumerate(stages):
+        bx = l + i * (bw + arr_gap)
+        box(s, bx, by, bw, bh, fill=cor, rounded=True, shadow=True)
+        text(s, bx + Inches(0.15), by + Inches(0.25), bw - Inches(0.3), Inches(0.9), [
+            [(lbl, 18, WHITE, True, FONT, False)],
+        ], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+        text(s, bx + Inches(0.12), by + Inches(1.20), bw - Inches(0.24), Inches(0.85), [
+            [(desc, 12, NEARWHITE, False, FONT, False)],
+        ], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.TOP, space_after=0)
+        if i < len(stages) - 1:
+            ax = bx + bw
+            ay = by + bh / 2
+            arrow(s, ax, ay, ax + arr_gap - Inches(0.02), ay, color=WHITE, w=Pt(3))
+    # legenda abaixo
+    text(s, l, by + bh + Inches(0.25), w, Inches(0.9), [
+        [("Também disponível via CLI: ", 14, INK, True, FONT, False),
+         ("endo-dsl compile jogo.endo", 14, INDIGO, False, MONO, False),
+         ("  e via API: POST /api/boardgame/generate", 14, INK, False, FONT, False)],
+        [("Rota web: /gdc — canvas interativo com 8 seções coloridas, seletor de mecânicas "
+          "e botão 'Gerar Protótipo'.", 13, GRAY, False, FONT, True)],
+    ], space_after=6)
+
+
+def slide_tabuleiro_tipos():
+    s = new_slide("4 tipos de jogo gerados", "Protótipos HTML5 jogáveis")
+    l, t, w, _ = body_area()
+    tipos = [
+        ("Trilha\n(track)",        GREEN_GDC,
+         "Tabuleiro com casas numeradas, dados virtuais, perguntas por casa, sistema de pontos."),
+        ("Quiz Battle\n(quiz)",    INDIGO,
+         "Batalha de perguntas em turnos, múltiplas opções, feedback imediato, placar."),
+        ("Memória\n(memory_match)", ORANGE_GDC,
+         "Pares de cartas viradas, correspondência conceito-definição, cronômetro."),
+        ("Grade\n(strategy_grid)", BLUE_GDC,
+         "Grid NxM com peças estratégicas, condições de vitória, movimentos por regras."),
+    ]
+    cw = Inches(5.90); ch = Inches(2.40); gy = Inches(0.22)
+    for i, (nome, cor, desc) in enumerate(tipos):
+        col = i % 2; row = i // 2
+        x = l + col * (cw + Inches(0.43))
+        y = t + row * (ch + gy)
+        box(s, x, y, cw, ch, fill=NEARWHITE, rounded=True, shadow=True)
+        box(s, x, y, Inches(0.16), ch, fill=cor)
+        text(s, x + Inches(0.35), y + Inches(0.18), Inches(2.0), Inches(0.75), [
+            [(nome, 17, INK, True, FONT, False)],
+        ], anchor=MSO_ANCHOR.MIDDLE)
+        chip(s, x + Inches(2.6), y + Inches(0.22), Inches(1.4), Inches(0.38),
+             "HTML5 puro", cor, size=11)
+        text(s, x + Inches(0.35), y + Inches(1.05), cw - Inches(0.55), Inches(1.2), [
+            [(desc, 13, GRAY, False, FONT, False)],
+        ], anchor=MSO_ANCHOR.TOP, space_after=0)
+
+
+def slide_tabuleiro_arquetipos():
+    content_slide(
+        "8 arquétipos de jogo", "Templates DSL pré-configurados",
+        [
+            "trilha — jogo de trilha com perguntas e casas especiais",
+            "quiz_battle — batalha de perguntas em turnos (2–4 jogadores)",
+            "memory_match — pares conceito–definição estilo jogo da memória",
+            "word_race — corrida de palavras com formação de vocabulário (Bloom: Lembrar/Compreender)",
+            "strategy_grid — grade estratégica com movimentos e condições de vitória (Bloom: Analisar)",
+            "cooperative_quest — missão cooperativa por fases com objetivos coletivos (Bloom: Aplicar)",
+            "auction_economy — leilão de recursos com negociação e cálculo (Bloom: Avaliar)",
+            "deduction_mystery — dedução de mistério com pistas e lógica (Bloom: Analisar/Avaliar)",
+        ],
+        size=17,
+        side=[
+            "Cada arquétipo tem parâmetros configuráveis via DSL",
+            "Parâmetros: players, duration, questions, difficulty…",
+            "Bloom level determina complexidade cognitiva do template",
+            "Conteúdo gerado a partir do domínio + tópico da DSL",
+            "Traceabilidade automática: objetivos ↔ mecânicas ↔ questões",
+        ],
+        side_title="Configuração",
+    )
+
+
+def slide_tabuleiro_dsl():
+    s = new_slide("Sintaxe DSL — boardgame{}", "Extensão da linguagem Endo-DSL")
+    l, t, w, _ = body_area()
+    code = (
+        'boardgame "Expedição Científica" {\n'
+        '  metadata {\n'
+        '    domain: "Ciências"    topic: "ecossistemas"\n'
+        '    bloom: Analisar       age_range: "12-14"\n'
+        '    duration: 30          players: 4\n'
+        '  }\n'
+        '  objective obj1 {\n'
+        '    description: "Identificar relações ecológicas"\n'
+        '    bloom: Analisar\n'
+        '  }\n'
+        '  mechanic trilha_eco {\n'
+        '    type: trilha    bloom: Analisar\n'
+        '    addresses: obj1\n'
+        '    params { spaces: 36  questions: 18  players: 4 }\n'
+        '  }\n'
+        '  gdc {\n'
+        '    mechanics: "trilha com perguntas sobre ecologia"\n'
+        '    dynamics: "competição cooperativa por bioma"\n'
+        '    aesthetics: "descoberta e exploração"\n'
+        '  }\n'
+        '}'
+    )
+    # caixa de código
+    cb = box(s, l, t, Inches(7.8), Inches(5.3), fill=SLATE, rounded=True, shadow=True)
+    tb = s.shapes.add_textbox(l + Inches(0.25), t + Inches(0.2),
+                              Inches(7.3), Inches(4.9))
+    tf = tb.text_frame; tf.word_wrap = False
+    first = True
+    for line in code.split("\n"):
+        p = tf.paragraphs[0] if first else tf.add_paragraph()
+        first = False
+        p.space_after = Pt(1)
+        r = p.add_run(); r.text = line
+        r.font.size = Pt(13.5); r.font.name = MONO
+        r.font.color.rgb = RGBColor(0xE2, 0xE8, 0xF0)
+    # painel lateral de saída
+    px = l + Inches(8.1)
+    pw = Inches(3.9)
+    box(s, px, t, pw, Inches(5.3), fill=CARD, rounded=True, shadow=True)
+    text(s, px + Inches(0.2), t + Inches(0.15), pw - Inches(0.4), Inches(0.45), [
+        [("Saída gerada", 13, INDIGO, True, FONT, False)],
+    ])
+    outputs = [
+        "HTML5 auto-contido (~55 KB)",
+        "Jogo de trilha com 18 perguntas",
+        "4 jogadores com dados virtuais",
+        "Banco de questões de ecossistemas",
+        "Traceabilidade obj1 ↔ trilha_eco",
+        "Rastreabilidade PDF exportável",
+        "Acesso via /boardgame/<id>",
+    ]
+    bullets(s, px + Inches(0.2), t + Inches(0.7), pw - Inches(0.4), Inches(4.4),
+            outputs, size=13, gap=9)
+
+
+# --------------------------------------------------------------------------- #
+# SLIDE 41 — Conclusão e próximos passos
 # --------------------------------------------------------------------------- #
 def slide_conclusao():
     content_slide(
@@ -1629,10 +1896,17 @@ def build():
     slide_contribuicoes()    # 30
     slide_ameacas()          # 31
     slide_cronograma()       # 32
-    slide_tese()             # 33
-    slide_conclusao()        # 34
-    slide_referencias()      # 35
-    slide_obrigado()         # 36
+    slide_tese()                    # 33
+    slide_tabuleiro_motivacao()     # 34
+    slide_tabuleiro_mecanicas()     # 35
+    slide_tabuleiro_gdc()           # 36
+    slide_tabuleiro_pipeline()      # 37
+    slide_tabuleiro_tipos()         # 38
+    slide_tabuleiro_arquetipos()    # 39
+    slide_tabuleiro_dsl()           # 40
+    slide_conclusao()               # 41
+    slide_referencias()             # 42
+    slide_obrigado()                # 43
 
     out = Path(__file__).parent / "Endo-DSL-Qualificacao.pptx"
     prs.save(str(out))
