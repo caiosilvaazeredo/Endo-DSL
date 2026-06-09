@@ -25,3 +25,5 @@ prototypes_out/
 !.vscode/extensions.json
 !.vscode/endo-dsl-language/
 *.swp
+variants/native/dist/
+__pycache__/

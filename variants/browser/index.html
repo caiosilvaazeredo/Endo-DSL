@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Endo-DSL · Compilador no Navegador (Pyodide)</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#334155; --ink:#e2e8f0; --muted:#94a3b8;
+    --indigo:#6366f1; --indigo2:#818cf8; --slate:#475569; --good:#34d399; --bad:#f87171;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:linear-gradient(160deg,#0b1220,#111a2e);color:var(--ink);height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid #243049;flex-wrap:wrap}
+  header h1{font-size:1.15rem;margin:0;letter-spacing:.3px}
+  header .tag{font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+    border:1px solid var(--slate);border-radius:999px;padding:3px 10px}
+  #status{margin-left:auto;font-size:.82rem;color:var(--muted)}
+  #status.ready{color:var(--good)}
+  #status.error{color:var(--bad)}
+  .toolbar{display:flex;gap:10px;align-items:center;padding:10px 20px;border-bottom:1px solid #243049;flex-wrap:wrap}
+  button.btn{background:var(--indigo);color:#fff;border:none;border-radius:10px;padding:9px 18px;
+    font:inherit;font-weight:700;cursor:pointer}
+  button.btn:hover{filter:brightness(1.08)}
+  button.btn:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--slate);color:var(--ink)}
+  select{background:var(--panel2);color:var(--ink);border:1px solid var(--slate);border-radius:10px;padding:8px 12px;font:inherit}
+  main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:0}
+  .pane{display:flex;flex-direction:column;min-height:0;min-width:0}
+  .pane.left{border-right:1px solid #243049}
+  .pane h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
+    margin:0;padding:10px 16px;border-bottom:1px solid #243049}
+  textarea{flex:1;resize:none;border:none;outline:none;background:#0b1324;color:#dbe5ff;
+    font-family:'Cascadia Code','Fira Code',ui-monospace,monospace;font-size:13px;line-height:1.55;padding:16px;min-height:0}
+  iframe{flex:1;border:none;background:#fff;min-height:0}
+  #errors{display:none;padding:14px 16px;background:rgba(248,113,113,.12);border-top:1px solid var(--bad);
+    color:#fecaca;font-family:ui-monospace,monospace;font-size:12.5px;white-space:pre-wrap;max-height:40%;overflow:auto}
+  #errors.show{display:block}
+</style>
+</head>
+<body>
+<header>
+  <h1>Endo-DSL</h1>
+  <span class="tag">compilador no navegador · Pyodide</span>
+  <span class="tag">100% client-side · sem servidor</span>
+  <span id="status">a iniciar o runtime Python…</span>
+</header>
+
+<div class="toolbar">
+  <button id="compile" class="btn" disabled>▶ Compilar</button>
+  <select id="examples" title="Carregar um exemplo">
+    <option value="">— exemplos —</option>
+    <option value="fracoes">Frações (Analisar)</option>
+    <option value="ambiental">Educação Ambiental (Aplicar)</option>
+  </select>
+  <button id="download" class="btn ghost" disabled>⤓ Baixar HTML</button>
+</div>
+
+<main>
+  <section class="pane left">
+    <h2>Especificação Endo-DSL</h2>
+    <textarea id="dsl" spellcheck="false"></textarea>
+    <div id="errors"></div>
+  </section>
+  <section class="pane">
+    <h2>Protótipo jogável (pré-visualização)</h2>
+    <iframe id="preview" title="Pré-visualização do protótipo"></iframe>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<script>
+const EXAMPLES = {
+  fracoes: `game "Comparando Frações" {
+  metadata {
+    domain: "Matemática"
+    topic: "frações"
+    bloom: Analisar
+    age_range: "10-11"
+    duration: 15
+  }
+  objective obj_comparar {
+    description: "Comparar frações com denominadores diferentes usando equivalência"
+    bloom: Analisar
+  }
+  mechanic comparacao {
+    type: classification
+    bloom: Analisar
+    addresses: obj_comparar
+    description: "O jogador classifica pares de frações."
+    params { items: 6  feedback: immediate }
+  }
+  mechanic revisao {
+    type: quiz
+    bloom: Lembrar
+    description: "Rodada de revisão."
+    params { questions: 4  attempts: 2 }
+  }
+}`,
+  ambiental: `game "Cidade Sustentável" {
+  metadata {
+    domain: "Educação Ambiental"
+    topic: "reciclagem"
+    bloom: Aplicar
+    duration: 12
+  }
+  objective obj_reciclar {
+    description: "Aplicar regras de coleta seletiva no dia a dia"
+    bloom: Aplicar
+  }
+  mechanic separar {
+    type: classification
+    bloom: Compreender
+    addresses: obj_reciclar
+    description: "Classificar resíduos por tipo."
+  }
+  mechanic etapas {
+    type: sequencing
+    bloom: Aplicar
+    addresses: obj_reciclar
+    description: "Ordenar as etapas da reciclagem."
+  }
+}`
+};
+
+const statusEl = document.getElementById('status');
+const dslEl = document.getElementById('dsl');
+const errEl = document.getElementById('errors');
+const previewEl = document.getElementById('preview');
+const compileBtn = document.getElementById('compile');
+const downloadBtn = document.getElementById('download');
+let pyodide = null;
+let lastHtml = '';
+
+dslEl.value = EXAMPLES.fracoes;
+
+function setStatus(msg, cls){ statusEl.textContent = msg; statusEl.className = cls || ''; }
+function showError(msg){ errEl.textContent = msg; errEl.classList.add('show'); }
+function clearError(){ errEl.textContent = ''; errEl.classList.remove('show'); }
+
+async function boot(){
+  try{
+    setStatus('a carregar Pyodide…');
+    pyodide = await loadPyodide();
+    setStatus('a montar o compilador Endo-DSL…');
+    // Carrega o payload (apenas dsl + compiler — sem banco de dados).
+    const resp = await fetch('endo_compiler_payload.zip');
+    if(!resp.ok) throw new Error('payload não encontrado: rode variants/browser/build.py e sirva a pasta por HTTP.');
+    const buf = await resp.arrayBuffer();
+    pyodide.unpackArchive(buf, 'zip');   // extrai endo_dsl/... no FS virtual
+    // Confirma a importação do caminho do compilador (livre de banco de dados).
+    pyodide.runPython('from endo_dsl.compiler.compiler import compile_source');
+    setStatus('pronto · compilador em execução no navegador', 'ready');
+    compileBtn.disabled = false;
+  }catch(e){
+    setStatus('falha ao iniciar', 'error');
+    showError(String(e));
+  }
+}
+
+function compile(){
+  clearError();
+  if(!pyodide) return;
+  try{
+    pyodide.globals.set('DSL_SOURCE', dslEl.value);
+    const html = pyodide.runPython(`
+import json
+from endo_dsl.compiler.compiler import compile_source, CompileError
+try:
+    _res = compile_source(DSL_SOURCE)
+    _out = _res.html
+except CompileError as _e:
+    _out = "ERRO::" + json.dumps(_e.messages, ensure_ascii=False)
+_out
+`);
+    if(html.startsWith('ERRO::')){
+      const msgs = JSON.parse(html.slice(6));
+      const lines = msgs.map(m=>{
+        const loc = m.line ? ` (linha ${m.line}, col ${m.col||0})` : '';
+        const sug = m.suggestion ? `\n    sugestão: ${m.suggestion}` : '';
+        return `[${m.code||m.kind}]${loc} ${m.message}${sug}`;
+      });
+      showError('Falha de compilação:\n' + lines.join('\n'));
+      return;
+    }
+    lastHtml = html;
+    previewEl.srcdoc = html;     // injeta o HTML autocontido no iframe
+    downloadBtn.disabled = false;
+    setStatus('compilado · ' + html.length + ' bytes', 'ready');
+  }catch(e){
+    showError('Erro inesperado:\n' + String(e));
+  }
+}
+
+compileBtn.addEventListener('click', compile);
+document.getElementById('examples').addEventListener('change', (ev)=>{
+  const k = ev.target.value;
+  if(k && EXAMPLES[k]){ dslEl.value = EXAMPLES[k]; clearError(); }
+});
+downloadBtn.addEventListener('click', ()=>{
+  if(!lastHtml) return;
+  const blob = new Blob([lastHtml], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'prototipo-endo-dsl.html'; a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+boot();
+</script>
+</body>
+</html>

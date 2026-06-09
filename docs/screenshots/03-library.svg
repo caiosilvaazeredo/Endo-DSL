@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" font-family="'Segoe UI',Helvetica,Arial,sans-serif">
+  <rect width="1280" height="800" fill="#f1f5f9"/>
+  <rect width="1280" height="56" fill="#1e293b"/>
+  <text x="28" y="35" fill="#fff" font-size="20" font-weight="700">Endo<tspan fill="#4f46e5">-DSL</tspan></text>
+  <g font-size="14" fill="#cbd5e1"><text x="420" y="35">Início</text><text x="510" y="35">Estúdio</text><text x="600" y="35" fill="#fff" font-weight="600">Biblioteca</text><text x="710" y="35">Curadoria</text><text x="815" y="35">Relatórios</text></g>
+  <text x="64" y="110" fill="#0f172a" font-size="30" font-weight="800">Biblioteca de componentes <tspan fill="#94a3b8" font-size="15" font-weight="400">RF07–RF12</tspan></text>
+  <!-- Filters -->
+  <g>
+    <rect x="64" y="140" width="280" height="40" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="80" y="165" fill="#94a3b8" font-size="14">🔍 Buscar componentes…</text>
+    <rect x="356" y="140" width="150" height="40" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="372" y="165" fill="#475569" font-size="14">Bloom ▾</text>
+    <rect x="518" y="140" width="150" height="40" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="534" y="165" fill="#475569" font-size="14">Mecânica ▾</text>
+    <rect x="680" y="140" width="150" height="40" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="696" y="165" fill="#475569" font-size="14">Domínio</text>
+    <rect x="842" y="140" width="150" height="40" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="858" y="165" fill="#475569" font-size="14">Status ▾</text>
+    <rect x="1004" y="140" width="100" height="40" rx="8" fill="#4f46e5"/><text x="1054" y="165" text-anchor="middle" fill="#fff" font-size="14">Filtrar</text>
+  </g>
+  <!-- Cards grid -->
+  <g>
+    <!-- card template -->
+    <!-- card 1 -->
+    <rect x="64" y="210" width="376" height="160" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="64" y="210" width="6" height="160" rx="3" fill="#3b82f6"/>
+    <rect x="84" y="228" width="70" height="22" rx="11" fill="#3b82f6"/><text x="119" y="243" text-anchor="middle" fill="#fff" font-size="11">Lembrar</text>
+    <rect x="162" y="228" width="90" height="22" rx="11" fill="#dcfce7"/><text x="207" y="243" text-anchor="middle" fill="#166534" font-size="11">canônico ★</text>
+    <text x="84" y="282" fill="#0f172a" font-size="17" font-weight="700">Quiz de fixação</text>
+    <text x="84" y="304" fill="#64748b" font-size="12">quiz.basic.recall · quiz</text>
+    <text x="84" y="332" fill="#475569" font-size="12">Perguntas de múltipla escolha para recordação.</text>
+    <text x="84" y="356" fill="#94a3b8" font-size="12">usos: 31 · ⟨4.3⟩</text>
+    <!-- card 2 -->
+    <rect x="456" y="210" width="376" height="160" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="456" y="210" width="6" height="160" rx="3" fill="#14b8a6"/>
+    <rect x="476" y="228" width="100" height="22" rx="11" fill="#14b8a6"/><text x="526" y="243" text-anchor="middle" fill="#fff" font-size="11">Compreender</text>
+    <rect x="584" y="228" width="90" height="22" rx="11" fill="#dcfce7"/><text x="629" y="243" text-anchor="middle" fill="#166534" font-size="11">canônico ★</text>
+    <text x="476" y="282" fill="#0f172a" font-size="17" font-weight="700">Pareamento conceito-def.</text>
+    <text x="476" y="304" fill="#64748b" font-size="12">matching.concept · matching</text>
+    <text x="476" y="332" fill="#475569" font-size="12">Liga conceitos às suas definições.</text>
+    <text x="476" y="356" fill="#94a3b8" font-size="12">usos: 22 · ⟨4.1⟩</text>
+    <!-- card 3 -->
+    <rect x="848" y="210" width="368" height="160" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="848" y="210" width="6" height="160" rx="3" fill="#eab308"/>
+    <rect x="868" y="228" width="76" height="22" rx="11" fill="#eab308"/><text x="906" y="243" text-anchor="middle" fill="#1e293b" font-size="11">Analisar</text>
+    <rect x="952" y="228" width="100" height="22" rx="11" fill="#fef9c3"/><text x="1002" y="243" text-anchor="middle" fill="#854d0e" font-size="11">experimental</text>
+    <text x="868" y="282" fill="#0f172a" font-size="17" font-weight="700">Classificação de frações</text>
+    <text x="868" y="304" fill="#64748b" font-size="12">classification.fractions · classification</text>
+    <text x="868" y="332" fill="#475569" font-size="12">Classifica pares em maior/menor/igual.</text>
+    <text x="868" y="356" fill="#94a3b8" font-size="12">usos: 6 · ⟨—⟩</text>
+    <!-- row 2 -->
+    <rect x="64" y="390" width="376" height="160" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="64" y="390" width="6" height="160" rx="3" fill="#22c55e"/>
+    <rect x="84" y="408" width="66" height="22" rx="11" fill="#22c55e"/><text x="117" y="423" text-anchor="middle" fill="#fff" font-size="11">Aplicar</text>
+    <text x="84" y="462" fill="#0f172a" font-size="17" font-weight="700">Sequenciamento de passos</text>
+    <text x="84" y="484" fill="#64748b" font-size="12">sequencing.steps · sequencing</text>
+    <text x="84" y="512" fill="#475569" font-size="12">Ordena etapas de um procedimento.</text>
+    <text x="84" y="536" fill="#94a3b8" font-size="12">usos: 14 · ⟨3.9⟩</text>
+    <rect x="456" y="390" width="376" height="160" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="456" y="390" width="6" height="160" rx="3" fill="#f97316"/>
+    <rect x="476" y="408" width="66" height="22" rx="11" fill="#f97316"/><text x="509" y="423" text-anchor="middle" fill="#fff" font-size="11">Avaliar</text>
+    <text x="476" y="462" fill="#0f172a" font-size="17" font-weight="700">Julgamento de argumentos</text>
+    <text x="476" y="484" fill="#64748b" font-size="12">comparison.judge · comparison</text>
+    <text x="476" y="512" fill="#475569" font-size="12">Avalia e justifica escolhas.</text>
+    <text x="476" y="536" fill="#94a3b8" font-size="12">usos: 9 · ⟨4.0⟩</text>
+    <rect x="848" y="390" width="368" height="160" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="848" y="390" width="6" height="160" rx="3" fill="#ef4444"/>
+    <rect x="868" y="408" width="58" height="22" rx="11" fill="#ef4444"/><text x="897" y="423" text-anchor="middle" fill="#fff" font-size="11">Criar</text>
+    <text x="868" y="462" fill="#0f172a" font-size="17" font-weight="700">Construção de puzzle</text>
+    <text x="868" y="484" fill="#64748b" font-size="12">puzzle.build · puzzle</text>
+    <text x="868" y="512" fill="#475569" font-size="12">O aprendiz monta uma solução original.</text>
+    <text x="868" y="536" fill="#94a3b8" font-size="12">usos: 4 · ⟨—⟩</text>
+  </g>
+  <text x="64" y="600" fill="#64748b" font-size="13">6 componentes · ★ canônico · ○ experimental</text>
+  <text x="640" y="770" fill="#94a3b8" font-size="13" text-anchor="middle">Endo-DSL · PESC/COPPE/UFRJ</text>
+</svg>

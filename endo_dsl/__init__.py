@@ -12,5 +12,5 @@ Proposta de pesquisa — Doutorado PESC/COPPE/UFRJ.
 Caio Azeredo | Orientador: Prof. Geraldo Bonorino Xexéo.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = ["__version__"]

@@ -1,0 +1,48 @@
+// Exemplo: Comparação de Frações — Bloom: Analisar
+// Arquivo: fracoes.endo
+// Use: endo-dsl compile examples/fracoes.endo
+
+game "Comparando Frações" {
+  metadata {
+    domain: "Matemática"
+    topic: "frações"
+    bloom: Analisar
+    age_range: "10-11"
+    duration: 15
+  }
+
+  objective obj_comparar {
+    description: "Comparar frações com denominadores diferentes usando equivalência"
+    bloom: Analisar
+  }
+
+  mechanic comparacao {
+    type: classification
+    bloom: Analisar
+    addresses: obj_comparar
+    description: "O jogador classifica pares de frações em maior, menor ou igual."
+    params {
+      items: 6
+      feedback: immediate
+    }
+  }
+
+  mechanic revisao {
+    type: quiz
+    bloom: Lembrar
+    description: "Rodada de revisão para fixação dos conceitos."
+    params {
+      questions: 4
+      attempts: 2
+    }
+  }
+
+  loop principal {
+    bloom: Analisar
+    description: "Classificar e revisar até consolidar a comparação."
+    steps {
+      comparacao -> revisao
+      revisao -> comparacao
+    }
+  }
+}
