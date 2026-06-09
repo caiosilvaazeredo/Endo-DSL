@@ -37,22 +37,47 @@ def status_badge(status: str) -> str:
     return f'<span class="pill {cls}">{esc(label)}</span>'
 
 
-def layout(title: str, body: str, active: str = "/") -> str:
+def layout(title: str, body: str, active: str = "/", *, full: bool = False) -> str:
     nav = "".join(
         f'<a href="{href}" class="{"active" if href == active else ""}">{esc(label)}</a>'
         for href, label in NAV
     )
+    main_cls = "" if full else "wrap"
+    foot = "" if full else (
+        '<footer class="foot">Endo-DSL · jogos educacionais endógenos · '
+        'PESC/COPPE/UFRJ</footer>')
     return f"""<!doctype html><html lang="pt-br"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title)} · Endo-DSL</title>
 <link rel="stylesheet" href="/static/app.css">
+<script>(function(){{try{{var t=localStorage.getItem('endo-theme');
+if(t)document.documentElement.setAttribute('data-theme',t);}}catch(e){{}}}})();</script>
 </head><body>
 <header class="topbar">
   <a class="brand" href="/">Endo<span>-DSL</span></a>
   <nav>{nav}</nav>
+  <div class="tools">
+    <button class="icon-btn" id="theme-toggle" title="Alternar tema (claro/escuro)"
+            aria-label="Alternar tema" onclick="ENDOUI.toggleTheme()">◐</button>
+    <button class="icon-btn" title="Atalhos de teclado" aria-label="Ajuda"
+            onclick="ENDOUI.help()">?</button>
+  </div>
 </header>
-<main>{body}</main>
-<footer class="foot">Endo-DSL · jogos educacionais endógenos · PESC/COPPE/UFRJ</footer>
+<main class="{main_cls}">{body}</main>
+{foot}
+<div class="overlay" id="help-overlay" onclick="if(event.target===this)ENDOUI.help()">
+  <div class="modal" role="dialog" aria-label="Atalhos de teclado">
+    <h2>Atalhos de teclado</h2>
+    <table>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>Compilar protótipo</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>Baixar protótipo (HTML)</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Abrir / fechar esta ajuda</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Fechar</td></tr>
+    </table>
+    <div class="actions"><button class="btn ghost" onclick="ENDOUI.help()">Fechar</button></div>
+  </div>
+</div>
+<script src="/static/ui.js"></script>
 </body></html>"""
 
 
@@ -90,121 +115,168 @@ def home_page(stats: Dict[str, Any]) -> str:
 
 def studio_page() -> str:
     bloom_opts = "".join(f'<option value="{b.pt}">{b.pt}</option>' for b in Bloom)
+    dom_opts = "".join(f'<option value="{esc(d)}">{esc(d)}</option>' for d in
+                       ["Matemática", "Português", "Ciências", "História",
+                        "Geografia", "Física", "Química", "Biologia"])
+    steps = [
+        (1, "Contexto educacional"), (2, "Recuperar componentes"),
+        (3, "Gerar especificação"), (4, "Revisar & validar"),
+        (5, "Compilar protótipo"), (6, "Avaliar"),
+    ]
+    stepper = "".join(
+        f'<li data-step="{n}" class="{"active" if n==1 else ""}" '
+        f'onclick="ENDO.go({n})"><span class="num">{n}</span>{esc(lbl)}</li>'
+        for n, lbl in steps)
     body = f"""
-<div class="studio">
-  <aside class="steps">
-    <h2>Jornada</h2>
-    <ol id="steps">
-      <li data-step="1" class="active">Contexto educacional</li>
-      <li data-step="2">Recuperar componentes</li>
-      <li data-step="3">Gerar especificação</li>
-      <li data-step="4">Revisar &amp; validar</li>
-      <li data-step="5">Compilar protótipo</li>
-      <li data-step="6">Avaliar</li>
-    </ol>
-  </aside>
-  <section class="panel">
-    <!-- Fase 1 -->
-    <div class="phase" data-phase="1">
-      <h2>Fase 1 — Contexto educacional <span class="rf">RF13</span></h2>
-      <label>Tema / área de conhecimento
-        <input id="domain" placeholder="ex.: Matemática (frações)"></label>
-      <label>Tópico específico
-        <input id="topic" placeholder="ex.: frações"></label>
+<div class="studio" id="studio">
+  <aside class="sidebar" id="sidebar">
+    <h2>Jornada (6 fases)</h2>
+    <ol class="stepper" id="stepper">{stepper}</ol>
+
+    <h2>Contexto educacional <span class="rf">RF13</span></h2>
+    <form id="ctx-form" class="ctx-form" onsubmit="return false">
+      <label>Tema / área<input name="domain" id="domain" placeholder="ex.: Matemática"></label>
+      <label>Tópico específico<input name="topic" id="topic" placeholder="ex.: frações"></label>
       <label>Objetivo de aprendizagem
-        <textarea id="objective" placeholder="ex.: comparar frações com denominadores diferentes"></textarea></label>
+        <textarea name="learning_objective" id="objective"
+          placeholder="ex.: comparar frações com denominadores diferentes"></textarea></label>
+      <label>Nível de Bloom desejado<select name="bloom_target" id="bloom">{bloom_opts}</select></label>
       <div class="row">
-        <label>Nível de Bloom desejado<select id="bloom">{bloom_opts}</select></label>
-        <label>Faixa etária<input id="age" placeholder="ex.: 10-11"></label>
+        <label>Faixa etária<input name="age_range" placeholder="ex.: 10-11"></label>
+        <label>Duração (min)<input name="duration_minutes" type="number" placeholder="15"></label>
       </div>
-      <div class="row">
-        <label>Escolaridade<input id="level" placeholder="ex.: 5º ano"></label>
-        <label>Duração (min)<input id="duration" type="number" placeholder="15"></label>
-      </div>
-      <label class="check"><input type="checkbox" id="noreading"> Sem leitura extensiva</label>
+      <label>Escolaridade<input name="education_level" placeholder="ex.: 5º ano"></label>
+      <label class="check"><input type="checkbox" name="no_extensive_reading" value="1">
+        Sem leitura extensiva</label>
+    </form>
+    <div class="actions">
+      <button class="btn block" onclick="ENDO.retrieve()">Recuperar componentes →</button>
+    </div>
+    <button class="btn ghost block" style="margin-top:.5rem" onclick="ENDO.skipToGenerate()">
+      Gerar do zero (IA)</button>
+
+    <div id="retrieved-wrap" hidden>
+      <h2>Componentes recuperados <span class="rf">RF14</span></h2>
+      <div id="retrieved-list" class="complist compact"></div>
       <div class="actions">
-        <button class="btn" onclick="ENDO.retrieve()">Recuperar componentes →</button>
-        <button class="btn ghost" onclick="ENDO.skipToGenerate()">Gerar do zero</button>
+        <button class="btn block" id="btn-generate" onclick="ENDO.generate()">
+          Gerar especificação →</button>
       </div>
     </div>
-    <!-- Fase 2 -->
-    <div class="phase" data-phase="2" hidden>
-      <h2>Fase 2 — Componentes recuperados <span class="rf">RF14</span></h2>
-      <p class="muted">Selecione os componentes que servirão de ponto de partida.</p>
-      <div id="retrieved" class="complist"></div>
-      <div class="actions">
-        <button class="btn ghost" onclick="ENDO.go(1)">← Voltar</button>
-        <button class="btn" onclick="ENDO.generate()">Gerar especificação →</button>
-      </div>
+
+    <div id="metrics-wrap" hidden>
+      <h2>Métricas de geração</h2>
+      <div id="metrics-box" class="metrics-mini"></div>
     </div>
-    <!-- Fase 3/4 -->
-    <div class="phase" data-phase="3" hidden>
-      <h2>Fases 3–4 — Especificação DSL <span class="rf">RF15 · RF16 · RF05</span></h2>
-      <div id="genmeta" class="muted"></div>
-      <div class="editor-wrap">
-        <pre id="highlight" class="highlight" aria-hidden="true"></pre>
-        <textarea id="dsl" spellcheck="false" oninput="ENDO.onEdit()"></textarea>
-      </div>
-      <div id="diagnostics" class="diagnostics"></div>
-      <div class="actions">
-        <button class="btn ghost" onclick="ENDO.go(2)">← Componentes</button>
-        <button class="btn" onclick="ENDO.compile()">Compilar protótipo →</button>
-      </div>
+  </aside>
+
+  <section class="center">
+    <div class="toolbar" role="toolbar" aria-label="Ações do editor">
+      <button class="icon-btn" title="Recolher painel lateral" aria-label="Recolher painel"
+              onclick="ENDO.toggleSidebar()" style="background:var(--bg-2);color:var(--text-2)">☰</button>
+      <button class="btn sm" id="btn-compile" onclick="ENDO.compile()" title="Ctrl+Enter">
+        ▶ Recompilar</button>
+      <button class="btn ghost sm" onclick="ENDO.generate()">✨ Gerar com IA</button>
+      <button class="btn ghost sm" onclick="ENDO.retrieve()">⊞ Recuperar componentes</button>
+      <span class="sep"></span>
+      <select id="reparam-domain" aria-label="Domínio para reparametrização">
+        <option value="">Domínio…</option>{dom_opts}</select>
+      <button class="btn ghost sm" onclick="ENDO.reparametrize()">↻ Reparametrizar</button>
+      <span class="spacer"></span>
+      <button class="btn ghost sm" id="btn-download" onclick="ENDO.download()" title="Ctrl+S">⬇ Baixar</button>
+      <button class="btn ghost sm" onclick="ENDO.gotoEvaluate()">★ Avaliar</button>
     </div>
-    <!-- Fase 5 -->
-    <div class="phase" data-phase="5" hidden>
-      <h2>Fase 5 — Protótipo compilado <span class="rf">RF19 · RF22 · RF23</span></h2>
-      <div id="compiled"></div>
+    <div class="editor-wrap">
+      <div class="gutter" id="gutter" aria-hidden="true">1</div>
+      <pre class="highlight" id="highlight" aria-hidden="true"></pre>
+      <textarea id="dsl-editor" spellcheck="false" autocomplete="off" autocapitalize="off"
+        aria-label="Editor da especificação DSL"
+        placeholder="// Preencha o contexto e clique em &quot;Gerar do zero&quot;, ou escreva sua DSL aqui.
+game &quot;Meu Jogo&quot; {{ ... }}"></textarea>
     </div>
-    <!-- Fase 6 -->
-    <div class="phase" data-phase="6" hidden>
-      <h2>Fase 6 — Avaliação pedagógica <span class="rf">RF24 · RF25</span></h2>
-      <div id="evalform"></div>
+    <div class="statusbar" id="statusbar">
+      <span class="st"><span class="dot" id="st-syn"></span>sintaxe</span>
+      <span class="st"><span class="dot" id="st-sem"></span>semântica</span>
+      <span class="st"><span class="dot" id="st-warn"></span><span id="st-warn-n">0</span> avisos</span>
+      <span class="st" id="st-msg"></span>
+      <span class="spacer"></span>
+      <span class="st" id="st-cursor">Ln 1, Col 1</span>
     </div>
   </section>
+
+  <section class="preview" id="preview">
+    <div class="pv-head">
+      <span>Pré-visualização ao vivo</span>
+      <span class="spacer"></span>
+      <span class="muted small" id="pv-status">—</span>
+      <button class="icon-btn" title="Abrir em nova aba" aria-label="Abrir protótipo"
+        onclick="ENDO.openPrototype()" style="width:30px;height:30px;font-size:.85rem">⤢</button>
+    </div>
+    <div class="pv-empty" id="pv-empty">
+      <span class="big">🎮</span>
+      <p>Compile uma especificação para ver o protótipo jogável aqui.</p>
+      <p class="small">A pré-visualização atualiza automaticamente após cada compilação.</p>
+    </div>
+    <iframe id="pv-frame" title="Protótipo compilado" hidden></iframe>
+  </section>
 </div>
+<div id="diagnostics" hidden></div>
 <script src="/static/studio.js"></script>"""
-    return layout("Estúdio", body, "/studio")
+    return layout("Estúdio", body, "/studio", full=True)
 
 
 def library_page(comps: List[Any], query: Dict[str, List[str]]) -> str:
     def val(k):
         return esc(query.get(k, [""])[0])
 
-    bloom_opts = '<option value="">Bloom</option>' + "".join(
+    bloom_opts = '<option value="">Bloom (todos)</option>' + "".join(
         f'<option value="{b.pt}">{b.pt}</option>' for b in Bloom)
-    type_opts = '<option value="">Mecânica</option>' + "".join(
+    type_opts = '<option value="">Mecânica (todas)</option>' + "".join(
         f'<option value="{k}">{esc(k)}</option>' for k in sorted(MECHANIC_TYPES))
-    rows = ""
+    cur_bloom = val("bloom")
+    chips = '<a class="chip {on}" href="?">Todos</a>'.format(
+        on="on" if not cur_bloom else "")
+    for b in Bloom:
+        on = "on" if cur_bloom == b.pt else ""
+        chips += (f'<a class="chip {on}" href="?bloom={b.pt}">'
+                  f'<span class="badge bloom-{int(b)}">{b.pt}</span></a>')
+    cards = ""
     for c in comps:
-        rating = f'⟨{c.metrics.avg_rating:.1f}⟩' if c.metrics.avg_rating else "—"
-        rows += f"""
-<tr onclick="location.href='/component/{esc(c.key)}'">
-  <td>{status_badge(c.status)}</td>
-  <td><b>{esc(c.name)}</b><br><span class="muted small">{esc(c.key)}</span></td>
-  <td>{bloom_badge(c.bloom_level)}</td>
-  <td>{esc(c.mechanic_type)}</td>
-  <td>{esc(c.domain or '—')}</td>
-  <td>{c.metrics.instantiations}</td>
-  <td>{rating}</td>
-</tr>"""
+        rating = f'{c.metrics.avg_rating:.1f}★' if c.metrics.avg_rating else "—"
+        cards += f"""
+<div class="comp-card" onclick="location.href='/component/{esc(c.key)}'" role="button"
+     tabindex="0" onkeydown="if(event.key==='Enter')location.href='/component/{esc(c.key)}'">
+  <div class="cc-head">
+    <div><div class="cc-name">{esc(c.name)}</div>
+      <div class="cc-key">{esc(c.key)}</div></div>
+    {status_badge(c.status)}
+  </div>
+  <div class="cc-badges">{bloom_badge(c.bloom_level)}
+    <span class="pill">{esc(c.mechanic_type)}</span>
+    <span class="pill">{esc(c.domain or 'genérico')}</span></div>
+  <div class="cc-desc">{esc((c.description or '')[:120])}</div>
+  <div class="cc-metrics">
+    <span><b>{c.metrics.instantiations}</b> usos</span>
+    <span><b>{rating}</b> aval. ({c.metrics.rating_count})</span>
+  </div>
+</div>"""
     body = f"""
 <h1>Biblioteca de componentes <span class="rf">RF07–RF12</span></h1>
+<p class="muted">{len(comps)} componente(s). Clique para ver detalhes, versões e curadoria.</p>
+<div class="chips">{chips}</div>
 <form class="filters" method="get">
-  <input name="text" placeholder="Buscar…" value="{val('text')}">
-  <select name="bloom">{_selected(bloom_opts, val('bloom'))}</select>
-  <select name="type">{_selected(type_opts, val('type'))}</select>
-  <input name="domain" placeholder="Domínio" value="{val('domain')}">
-  <select name="status">{_selected('<option value="">Status</option>'
+  <label style="margin:0">Busca<input name="text" placeholder="Buscar nome, descrição…" value="{val('text')}"></label>
+  <label style="margin:0">Bloom<select name="bloom">{_selected(bloom_opts, val('bloom'))}</select></label>
+  <label style="margin:0">Mecânica<select name="type">{_selected(type_opts, val('type'))}</select></label>
+  <label style="margin:0">Domínio<input name="domain" placeholder="ex.: Matemática" value="{val('domain')}"></label>
+  <label style="margin:0">Status<select name="status">{_selected('<option value="">Todos</option>'
         '<option value="canonical">canônico</option>'
-        '<option value="experimental">experimental</option>', val('status'))}</select>
+        '<option value="experimental">experimental</option>', val('status'))}</select></label>
   <button class="btn" type="submit">Filtrar</button>
 </form>
-<table class="grid">
-  <tr><th>Status</th><th>Componente</th><th>Bloom</th><th>Mecânica</th>
-      <th>Domínio</th><th>Usos</th><th>Aval.</th></tr>
-  {rows or '<tr><td colspan="7" class="muted">Nenhum componente encontrado.</td></tr>'}
-</table>"""
+<div class="complist">
+  {cards or '<p class="muted">Nenhum componente encontrado para os filtros atuais.</p>'}
+</div>"""
     return layout("Biblioteca", body, "/library")
 
 
@@ -284,12 +356,25 @@ def curator_page(queue: List[Any]) -> str:
 def report_page(report: Dict[str, Any]) -> str:
     s = report["summary"]
     dim_rows = ""
+    chart = ""
+    has_data = False
     for d in report["by_dimension"]:
         dim_rows += f"""
 <tr><td>{esc(d['label'])}</td>
     <td>{_barcell(d['auto'])}</td>
     <td>{_barcell(d['manual'])}</td>
     <td>{_delta(d['delta'])}</td></tr>"""
+        a = d.get("auto"); mn = d.get("manual")
+        if a is not None or mn is not None:
+            has_data = True
+        chart += f"""
+<div class="bc-row"><span>{esc(d['label'])}</span><div class="bc-track">
+  {_bar('bc-auto', a)}{_bar('bc-manual', mn)}</div></div>"""
+    chart_block = ("" if not has_data else f"""
+<h3>Comparativo por dimensão (automático × manual)</h3>
+<div class="legend"><span><i style="background:var(--indigo)"></i>Automático</span>
+  <span><i style="background:var(--bloom-2)"></i>Manual</span></div>
+<div class="barchart">{chart}</div>""")
     bloom_rows = "".join(
         f"<tr><td>{bloom_badge(k)}</td><td>{_fmt(v['auto_mean'])} ({v['n_auto']})</td>"
         f"<td>{_fmt(v['manual_mean'])} ({v['n_manual']})</td></tr>"
@@ -307,6 +392,7 @@ def report_page(report: Dict[str, Any]) -> str:
   <div class="stat"><a class="btn ghost" href="/api/report?format=csv">⬇ CSV (RF25)</a></div>
 </div>
 <p class="callout">{esc(report['interpretation'])}</p>
+{chart_block}
 <h3>Por dimensão pedagógica</h3>
 <table class="grid"><tr><th>Dimensão</th><th>Automático</th><th>Manual</th><th>Δ</th></tr>
 {dim_rows}</table>
@@ -393,6 +479,13 @@ def _delta(v) -> str:
         return "—"
     cls = "up" if v > 0 else ("down" if v < 0 else "")
     return f'<span class="delta {cls}">{v:+.2f}</span>'
+
+
+def _bar(cls: str, v) -> str:
+    if v is None:
+        return ""
+    pct = max(0, min(100, int(round(v / 5 * 100))))
+    return f'<div class="bc-fill {cls}" style="width:{pct}%">{v:.1f}</div>'
 
 
 def _barcell(v) -> str:
