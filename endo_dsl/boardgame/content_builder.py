@@ -137,7 +137,7 @@ _GENERICO_QUESTIONS = [
     {"q": "Em que país fica a Torre Eiffel?", "options": ["França", "Itália", "Espanha", "Bélgica"], "answer": 0, "bloom": 1, "category": "geografia"},
     {"q": "Qual é a velocidade da luz?", "options": ["300.000 km/s", "30.000 km/s", "3.000.000 km/s", "150.000 km/s"], "answer": 0, "bloom": 1, "category": "física"},
     {"q": "O que significa 'ONU'?", "options": ["Organização das Nações Unidas", "Organização Nacional Unida", "União das Nações Organizadas", "Nações Unidas do Ocidente"], "answer": 0, "bloom": 1, "category": "política"},
-    {"q": "Qual é o idioma mais falado no mundo?", "options": ["Mandarim", "Inglês", "Espanhol", "Hindi"], "answer": 0, "bloom": 1, "category": "cultura"],
+    {"q": "Qual é o idioma mais falado no mundo?", "options": ["Mandarim", "Inglês", "Espanhol", "Hindi"], "answer": 0, "bloom": 1, "category": "cultura"},
     {"q": "Quantos continentes existem?", "options": ["7", "6", "5", "8"], "answer": 0, "bloom": 1, "category": "geografia"},
     {"q": "Qual é o maior oceano do mundo?", "options": ["Pacífico", "Atlântico", "Índico", "Ártico"], "answer": 0, "bloom": 1, "category": "geografia"},
     {"q": "O que é democracia?", "options": ["Sistema de governo onde o poder emana do povo", "Governo de um só líder", "Governo dos mais ricos", "Governo militar"], "answer": 0, "bloom": 2, "category": "política"},
@@ -245,7 +245,10 @@ def build_board_content(
     random.shuffle(questions)
 
     board_type = board.get('type', 'track')
-    spaces_count = int(board.get('spaces', 36))
+    _spaces_raw = board.get('spaces', 36)
+    spaces_count = len(_spaces_raw) if isinstance(_spaces_raw, list) else int(_spaces_raw)
+    if spaces_count == 0:
+        spaces_count = 36
     num_players = 2
 
     players_raw = rules.get('players', meta.get('players', '2..4'))

@@ -494,3 +494,60 @@ def serve(host: str = "127.0.0.1", port: int = 8000,
     except KeyboardInterrupt:
         print("\nEncerrando…")
         httpd.server_close()
+
+
+# --------------------------------------------------------------------------- #
+# Construtor de Blocos MDA (mecânicas/dinâmicas/estéticas + fluxo BPMN)
+# --------------------------------------------------------------------------- #
+@route("GET", "/builder")
+def builder(p: Platform, m, q, body) -> Response:
+    return _html(views.builder_page())
+
+
+@route("GET", "/api/builder/catalogs")
+def api_builder_catalogs(p: Platform, m, q, body) -> Response:
+    from endo_dsl.boardgame.catalogs import get_catalogs
+    return _json(get_catalogs())
+
+
+@route("POST", "/api/builder/dsl")
+def api_builder_dsl(p: Platform, m, q, body) -> Response:
+    from endo_dsl.boardgame.block_builder import blocks_to_dsl
+    try:
+        return _json({"ok": True, "dsl": blocks_to_dsl(body.get("config", body))})
+    except Exception as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+
+
+@route("POST", "/api/builder/generate")
+def api_builder_generate(p: Platform, m, q, body) -> Response:
+    from endo_dsl.boardgame.block_builder import compile_blocks
+    from endo_dsl.db.database import now_iso, to_json
+    config = body.get("config", body)
+    try:
+        result = compile_blocks(config)
+    except Exception as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+    title = str(config.get("title") or "Jogo de Blocos")
+    spec_id = p.db.insert(
+        """INSERT INTO specifications (session_id, title, dsl_source, origin, parsed_ok, created_at)
+           VALUES (NULL,?,?,?,1,?)""",
+        (title, result["dsl"], "auto", now_iso()),
+    )
+    out_dir = p.workspace / f"boardgame_{spec_id}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    html_path = out_dir / "boardgame.html"
+    html_path.write_text(result["html"], encoding="utf-8")
+    trace = result.get("traceability") or {}
+    proto_id = p.db.insert(
+        """INSERT INTO prototypes
+           (spec_id, session_id, title, html_path, traceability_json, bloom_levels_json,
+            origin, compiled_ok, created_at)
+           VALUES (?,NULL,?,?,?,?,?,1,?)""",
+        (spec_id, title, str(html_path), to_json(trace),
+         to_json(trace.get("bloom_levels_covered", [])), "auto", now_iso()),
+    )
+    return _json({"ok": True, "spec_id": spec_id, "prototype_id": proto_id,
+                  "dsl": result["dsl"],
+                  "html_url": f"/boardgame/{proto_id}",
+                  "traceability": trace})

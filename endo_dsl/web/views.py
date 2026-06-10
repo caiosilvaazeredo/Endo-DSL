@@ -14,6 +14,7 @@ NAV = [
     ("/",         "Início"),
     ("/studio",   "Estúdio"),
     ("/gdc",      "GDC Canvas"),
+    ("/builder",  "Construtor"),
     ("/library",  "Biblioteca"),
     ("/curator",  "Curadoria"),
     ("/report",   "Relatórios"),
@@ -873,3 +874,92 @@ def _barcell(v) -> str:
     pct = int(round(v / 5 * 100))
     return (f'<div class="minibar"><i style="width:{pct}%"></i></div>'
             f'<span class="small">{v:.2f}</span>')
+
+
+# --------------------------------------------------------------------------- #
+# Construtor de Blocos MDA — mecânicas, dinâmicas, estéticas + fluxo BPMN
+# --------------------------------------------------------------------------- #
+def builder_page() -> str:
+    body = """
+<div class="bld-page" id="bld-root">
+  <div class="bld-header">
+    <div>
+      <h1 style="margin:0">Construtor de Blocos — MDA</h1>
+      <p class="muted" style="margin:.2rem 0 0">Monte um jogo de tabuleiro combinando blocos de
+         <b>Mecânicas</b>, <b>Dinâmicas</b> e <b>Estéticas</b>, desenhe o fluxo no editor BPMN
+         e gere o protótipo HTML5 jogável. Cada bloco emite código DSL automaticamente.</p>
+    </div>
+    <div class="bld-header-actions">
+      <button class="btn ghost sm" onclick="BLD.saveJSON()">Salvar JSON</button>
+      <button class="btn ghost sm" onclick="BLD.loadJSON()">Carregar</button>
+      <button class="btn sm" id="bld-btn-dsl" onclick="BLD.showDSL()">&lt;/&gt; Ver DSL</button>
+      <button class="btn primary sm" id="bld-btn-generate" onclick="BLD.generate()">▶ Gerar Jogo</button>
+    </div>
+  </div>
+
+  <div class="bld-meta card">
+    <label>Título <input id="bld-title" type="text" placeholder="Nome do jogo"></label>
+    <label>Domínio <input id="bld-domain" type="text" placeholder="ex.: Matemática"></label>
+    <label>Tópico <input id="bld-topic" type="text" placeholder="ex.: frações"></label>
+    <label>Bloom
+      <select id="bld-bloom">
+        <option>Lembrar</option><option>Compreender</option><option>Aplicar</option>
+        <option selected>Analisar</option><option>Avaliar</option><option>Criar</option>
+      </select>
+    </label>
+    <label>Jogadores <input id="bld-players" type="number" min="1" max="8" value="2"></label>
+    <label>Duração (min) <input id="bld-duration" type="number" min="5" max="120" value="30"></label>
+    <label class="bld-obj">Objetivo de aprendizagem
+      <input id="bld-objective" type="text" placeholder="O que o aluno deve dominar?"></label>
+  </div>
+
+  <div class="bld-tabs" role="tablist">
+    <button class="bld-tab active" data-tab="mechanics" onclick="BLD.setTab('mechanics')">⚙️ Mecânicas <span class="bld-count" id="cnt-mechanics">0</span></button>
+    <button class="bld-tab" data-tab="dynamics" onclick="BLD.setTab('dynamics')">🧩 Dinâmicas <span class="bld-count" id="cnt-dynamics">0</span></button>
+    <button class="bld-tab" data-tab="aesthetics" onclick="BLD.setTab('aesthetics')">❤️ Estéticas <span class="bld-count" id="cnt-aesthetics">0</span></button>
+    <button class="bld-tab" data-tab="flow" onclick="BLD.setTab('flow')">🔀 Fluxo (BPMN)</button>
+    <input id="bld-search" type="search" placeholder="Filtrar blocos…" oninput="BLD.filter(this.value)">
+  </div>
+
+  <div class="bld-panel" id="panel-mechanics"><div class="bld-grid" id="grid-mechanics"></div></div>
+  <div class="bld-panel hidden" id="panel-dynamics"><div class="bld-grid" id="grid-dynamics"></div></div>
+  <div class="bld-panel hidden" id="panel-aesthetics"><div class="bld-grid" id="grid-aesthetics"></div></div>
+
+  <div class="bld-panel hidden" id="panel-flow">
+    <div class="bld-flow-toolbar">
+      <span class="muted">Adicionar nó:</span>
+      <span id="bld-flow-palette"></span>
+      <span style="flex:1"></span>
+      <button class="btn ghost sm" onclick="BLD.flowConnectMode()" id="bld-btn-connect">↦ Conectar</button>
+      <button class="btn ghost sm" onclick="BLD.flowDeleteSelected()">🗑 Excluir nó</button>
+      <button class="btn ghost sm" onclick="BLD.flowClear()">Limpar fluxo</button>
+    </div>
+    <svg id="bld-flow-canvas" class="bld-flow-canvas" tabindex="0">
+      <defs>
+        <marker id="bld-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent, #4f46e5)"></path>
+        </marker>
+      </defs>
+      <g id="bld-flow-edges"></g>
+      <g id="bld-flow-nodes"></g>
+    </svg>
+    <p class="muted small">Clique num tipo da paleta para adicionar; arraste nós para posicionar;
+       use “Conectar” e clique em dois nós para criar uma seta; duplo-clique renomeia.</p>
+  </div>
+
+  <div class="bld-modal hidden" id="bld-dsl-modal">
+    <div class="bld-modal-card">
+      <div class="bld-modal-head"><h3>&lt;/&gt; DSL gerada pelos blocos</h3>
+        <button class="btn ghost sm" onclick="BLD.closeDSL()">Fechar</button></div>
+      <pre id="bld-dsl-content" class="code"></pre>
+      <div class="bld-modal-foot">
+        <button class="btn ghost sm" onclick="BLD.copyDSL()">Copiar</button>
+        <button class="btn primary sm" onclick="BLD.generate()">▶ Gerar Jogo</button>
+      </div>
+    </div>
+  </div>
+</div>
+<link rel="stylesheet" href="/static/builder.css">
+<script src="/static/builder.js"></script>"""
+    return layout("Construtor de Blocos", body, "/builder")
