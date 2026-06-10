@@ -1,0 +1,81 @@
+(* ===================================================================== *)
+(* Gramática formal da Endo-DSL  —  RF01, RF02                            *)
+(* Notação: EBNF (ISO/IEC 14977). Terminais entre aspas; (* ... *) =     *)
+(* comentários; { x } = zero ou mais; [ x ] = opcional; | = alternativa. *)
+(*                                                                       *)
+(* Esta gramática cobre os principais construtos do Endo-GDC:            *)
+(*   - mecânicas de jogo            (mechanic)                            *)
+(*   - loops de jogabilidade        (loop / steps)                       *)
+(*   - ramificações narrativas      (narrative / branch / choice)        *)
+(*   - objetivos pedagógicos        (objective)                          *)
+(* e mapeia os seis níveis da Taxonomia de Bloom como construto de       *)
+(* primeira classe (não-terminal <bloom>), exigível em qualquer elemento.*)
+(* ===================================================================== *)
+
+spec            = game_decl ;
+
+game_decl       = "game" , string , "{" , { game_member } , "}" ;
+
+game_member     = metadata_block
+                | objective_decl
+                | mechanic_decl
+                | loop_decl
+                | narrative_decl ;
+
+(* ----- Metadados / contexto educacional ----- *)
+metadata_block  = "metadata" , "{" , { entry } , "}" ;
+entry           = ident , ":" , value ;
+
+(* ----- Objetivos pedagógicos ----- *)
+objective_decl  = "objective" , ident , "{" , { objective_field } , "}" ;
+objective_field = "description" , ":" , string
+                | "bloom"       , ":" , bloom ;
+
+(* ----- Mecânicas de jogo endógenas ----- *)
+mechanic_decl   = "mechanic" , ident , "{" , { mechanic_field } , "}" ;
+mechanic_field  = "type"        , ":" , ident
+                | "bloom"        , ":" , bloom
+                | "addresses"    , ":" , ident_list
+                | "description"  , ":" , string
+                | "source_component" , ":" , string
+                | params_block ;
+
+params_block    = "params" , "{" , { entry } , "}" ;
+
+(* ----- Loops de jogabilidade ----- *)
+loop_decl       = "loop" , ident , "{" , { loop_field } , "}" ;
+loop_field      = "bloom"       , ":" , bloom
+                | "description"  , ":" , string
+                | steps_block ;
+steps_block     = "steps" , "{" , { transition } , "}" ;
+transition      = ident , "->" , ident ;
+
+(* ----- Ramificações narrativas ----- *)
+narrative_decl  = "narrative" , ident , "{" , { branch_decl } , "}" ;
+branch_decl     = "branch" , ident , "{" , { branch_field } , "}" ;
+branch_field    = "bloom"       , ":" , bloom
+                | "text"         , ":" , string
+                | "description"  , ":" , string
+                | choice_decl ;
+choice_decl     = "choice" , string , "->" , ident ;
+
+(* ----- Valores ----- *)
+ident_list      = ident , { "," , ident } ;
+value           = string | number | range | bool | ident ;
+range           = number , ".." , number ;
+bool            = "true" | "false" ;
+
+(* ----- Taxonomia de Bloom como construto de primeira classe (RF02) ----- *)
+(* Nomes canônicos em português; o parser também aceita os equivalentes em   *)
+(* inglês (Remember, Understand, Apply, Analyze, Evaluate, Create).          *)
+bloom           = "Lembrar" | "Compreender" | "Aplicar"
+                | "Analisar" | "Avaliar"    | "Criar" ;
+
+(* ----- Terminais léxicos ----- *)
+ident           = letter , { letter | digit | "_" | "." } ;
+string          = '"' , { character - '"' } , '"' ;
+number          = [ "-" ] , digit , { digit } , [ "." , digit , { digit } ] ;
+letter          = "a" | "..." | "z" | "A" | "..." | "Z" ;
+digit           = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+(* Comentários (ignorados pelo léxico): "//" até fim de linha; "/* ... */". *)

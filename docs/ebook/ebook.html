@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endo-DSL: Projetando Jogos Educativos com Linguagens de Domínio Específico e Taxonomia de Bloom</title>
+<style>
+/* ============================================================
+   ENDO-DSL EBOOK — Estilos tipográficos de livro
+   ============================================================ */
+
+:root {
+  --bg: #faf8f4;
+  --fg: #1a1208;
+  --muted: #5c4f3a;
+  --accent: #4a2f6b;
+  --accent-light: #7c5cbf;
+  --border: #d8cfc0;
+  --surface: #f0ebe1;
+  --code-bg: #1e1a14;
+  --code-fg: #e8e0d0;
+  --link: #4a2f6b;
+
+  /* Bloom colors */
+  --bloom-1: #1e40af;  /* Lembrar — azul */
+  --bloom-2: #0d9488;  /* Compreender — teal */
+  --bloom-3: #16a34a;  /* Aplicar — verde */
+  --bloom-4: #ca8a04;  /* Analisar — amarelo */
+  --bloom-5: #ea580c;  /* Avaliar — laranja */
+  --bloom-6: #dc2626;  /* Criar — vermelho */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 17px; scroll-behavior: smooth; }
+
+body {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.8;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 2rem 3rem 6rem 3rem;
+}
+
+/* ---- CAPA ---- */
+.cover {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 4rem 0;
+  border-bottom: 3px solid var(--accent);
+  margin-bottom: 4rem;
+  page-break-after: always;
+}
+
+.cover-label {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: .8rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.cover h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--fg);
+  margin-bottom: 1.5rem;
+  max-width: 640px;
+}
+
+.cover h1 span.accent { color: var(--accent); }
+
+.cover .subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--muted);
+  margin-bottom: 3rem;
+  max-width: 560px;
+  line-height: 1.6;
+}
+
+.cover .meta {
+  font-size: .95rem;
+  color: var(--muted);
+  line-height: 2;
+  border-left: 3px solid var(--accent);
+  padding-left: 1.2rem;
+}
+
+.cover .meta strong { color: var(--fg); }
+
+.bloom-strip {
+  display: flex;
+  height: 8px;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 2.5rem 0;
+}
+.bloom-strip span { flex: 1; }
+
+/* ---- FICHA CATALOGRÁFICA ---- */
+.ficha {
+  border: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  margin: 3rem 0;
+  font-size: .88rem;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.ficha h3 {
+  font-size: .8rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  color: var(--fg);
+}
+
+.ficha p { margin-bottom: .4rem; line-height: 1.6; }
+
+/* ---- ÍNDICE ---- */
+.toc {
+  margin: 3rem 0 4rem 0;
+  page-break-after: always;
+}
+
+.toc h2 {
+  font-size: 1.4rem;
+  font-variant: small-caps;
+  letter-spacing: .06em;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: .5rem;
+}
+
+.toc ol { list-style: none; counter-reset: toc-counter; }
+
+.toc > ol > li {
+  counter-increment: toc-counter;
+  margin-bottom: .3rem;
+}
+
+.toc > ol > li > a {
+  display: flex;
+  justify-content: space-between;
+  text-decoration: none;
+  color: var(--fg);
+  font-size: 1rem;
+  padding: .35rem 0;
+  border-bottom: 1px dotted var(--border);
+}
+
+.toc > ol > li > a:hover { color: var(--accent); }
+
+.toc > ol > li > a::before {
+  content: counter(toc-counter) ". ";
+  color: var(--accent);
+  font-weight: bold;
+  min-width: 2.5rem;
+}
+
+.toc-sub { list-style: none; padding-left: 2.5rem; margin: .2rem 0 .5rem 0; }
+.toc-sub li a {
+  font-size: .92rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.toc-sub li a:hover { color: var(--accent); }
+
+/* ---- CAPÍTULOS ---- */
+.chapter {
+  margin: 5rem 0 4rem 0;
+  page-break-before: always;
+}
+
+.chapter-num {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: .75rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .5rem;
+}
+
+h2.chapter-title {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--fg);
+  margin-bottom: .5rem;
+  padding-bottom: .8rem;
+  border-bottom: 2px solid var(--accent);
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--fg);
+  margin: 2rem 0 .8rem 0;
+}
+
+h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 1.5rem 0 .5rem 0;
+}
+
+p {
+  margin-bottom: 1.1rem;
+  text-align: justify;
+  hyphens: auto;
+}
+
+/* ---- LEAD PARAGRAPH ---- */
+.chapter > p:first-of-type,
+.lead {
+  font-size: 1.1rem;
+  line-height: 1.9;
+  color: var(--muted);
+  border-left: 4px solid var(--accent);
+  padding-left: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+/* ---- LINKS ---- */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- CÓDIGO ---- */
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 1.2rem 1.5rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', Courier, monospace;
+  font-size: .82rem;
+  line-height: 1.7;
+  margin: 1.5rem 0;
+}
+
+code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', Courier, monospace;
+  font-size: .85em;
+  background: var(--surface);
+  color: var(--accent);
+  padding: .15em .4em;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+}
+
+/* DSL syntax coloring */
+.kw   { color: #82aaff; }   /* keywords */
+.bloom-token { font-weight: bold; }
+.bloom-1-t { color: #89ddff; }
+.bloom-2-t { color: #89ddff; }
+.bloom-3-t { color: #c3e88d; }
+.bloom-4-t { color: #ffcb6b; }
+.bloom-5-t { color: #f78c6c; }
+.bloom-6-t { color: #ff5370; }
+.str  { color: #c3e88d; }   /* strings */
+.cmt  { color: #546e7a; font-style: italic; }
+.ident { color: #eeffff; }
+.num  { color: #f78c6c; }
+.type-val { color: #ffcb6b; }
+
+/* ---- TABELAS ---- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5rem 0;
+  font-size: .9rem;
+}
+
+th {
+  background: var(--accent);
+  color: white;
+  padding: .7rem 1rem;
+  text-align: left;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: .85rem;
+  letter-spacing: .04em;
+}
+
+td {
+  padding: .6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+tr:nth-child(even) td { background: var(--surface); }
+
+/* ---- CALLOUTS ---- */
+.callout {
+  border-left: 4px solid var(--accent);
+  background: var(--surface);
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.callout.note  { border-left-color: var(--bloom-1); }
+.callout.tip   { border-left-color: var(--bloom-3); }
+.callout.warn  { border-left-color: var(--bloom-5); }
+
+/* ---- BLOOM VISUAL ---- */
+.bloom-visual {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  margin: 2rem 0;
+}
+
+.bloom-level {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .7rem 1.2rem;
+  border-radius: 6px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: .9rem;
+}
+
+.bloom-level .num  { font-size: 1.4rem; font-weight: 900; min-width: 2rem; }
+.bloom-level .name { font-weight: 700; min-width: 7rem; font-size: 1rem; }
+.bloom-level .verbs { font-size: .82rem; opacity: .85; }
+
+/* ---- LISTS ---- */
+ul, ol {
+  padding-left: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+li { margin-bottom: .4rem; }
+
+/* ---- APÊNDICE ---- */
+.appendix { margin-top: 5rem; }
+
+.appendix-label {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: .75rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---- PREFÁCIO / EPÍGRAFE ---- */
+.preface {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 2rem 0;
+  margin: 2rem 0 3rem 0;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+/* ---- FOOTER / COLOPHON ---- */
+.colophon {
+  margin-top: 6rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: .82rem;
+  color: var(--muted);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-align: center;
+}
+
+/* ---- PRINT ---- */
+@media print {
+  body { max-width: 100%; padding: 1in 1.2in; font-size: 11pt; }
+  .chapter { page-break-before: always; }
+  a { color: inherit; }
+  pre { white-space: pre-wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- CAPA                                                              -->
+<!-- ================================================================ -->
+<div class="cover" id="capa">
+  <div class="cover-label">PESC/COPPE/UFRJ · Pesquisa de Doutorado</div>
+  <h1>
+    <span class="accent">Endo-DSL:</span><br>
+    Projetando Jogos Educativos com<br>Linguagens de Domínio Específico<br>e Taxonomia de Bloom
+  </h1>
+  <p class="subtitle">
+    Da formalização de construtos de game design educacional à síntese
+    assistida por pipeline multi-agente e à avaliação comparativa
+    automático&nbsp;×&nbsp;manual.
+  </p>
+  <div class="bloom-strip">
+    <span style="background:var(--bloom-1)"></span>
+    <span style="background:var(--bloom-2)"></span>
+    <span style="background:var(--bloom-3)"></span>
+    <span style="background:var(--bloom-4)"></span>
+    <span style="background:var(--bloom-5)"></span>
+    <span style="background:var(--bloom-6)"></span>
+  </div>
+  <div class="meta">
+    <strong>Autor:</strong> Caio Sazeredo<br>
+    <strong>Programa:</strong> Engenharia de Sistemas e Computação (PESC)<br>
+    <strong>Instituição:</strong> COPPE/UFRJ — Rio de Janeiro, Brasil<br>
+    <strong>Contato:</strong> caiosazeredo@cos.ufrj.br<br>
+    <strong>Data:</strong> Junho de 2026<br>
+    <strong>Versão:</strong> 1.1.0
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- FICHA CATALOGRÁFICA                                               -->
+<!-- ================================================================ -->
+<div class="ficha">
+  <h3>Ficha Catalográfica</h3>
+  <p>
+    <strong>Sazeredo, Caio</strong><br>
+    Endo-DSL: Projetando Jogos Educativos com Linguagens de Domínio Específico
+    e Taxonomia de Bloom / Caio Sazeredo. —
+    Rio de Janeiro: PESC/COPPE/UFRJ, 2026.
+  </p>
+  <p>
+    Inclui referências bibliográficas e apêndices.
+  </p>
+  <p>
+    1.&nbsp;Linguagens de domínio específico.
+    2.&nbsp;Taxonomia de Bloom.
+    3.&nbsp;Jogos educativos endógenos.
+    4.&nbsp;Pipeline multi-agente.
+    5.&nbsp;Compilação HTML5.
+    6.&nbsp;Design Science Research.
+    I.&nbsp;Título.
+  </p>
+  <p style="margin-top:1rem;">CDD&nbsp;005.13 · CDU&nbsp;004.43:371.3</p>
+</div>
+
+<!-- ================================================================ -->
+<!-- PREFÁCIO                                                          -->
+<!-- ================================================================ -->
+<div class="preface">
+  <p>
+    "Ensinar não é transferir conhecimento, mas criar possibilidades para a
+    sua produção ou a sua construção." — Paulo Freire
+  </p>
+  <p style="margin-top:1rem;">
+    Este livro narra a construção de uma linguagem que tenta tornar
+    verificável o que foi ensinado, o que foi jogado, e — esperamos —
+    o que foi aprendido.
+  </p>
+</div>
+
+<!-- ================================================================ -->
+<!-- ÍNDICE                                                            -->
+<!-- ================================================================ -->
+<nav class="toc" id="indice">
+  <h2>Índice</h2>
+  <ol>
+    <li><a href="#cap-intro">Introdução: Contexto, Motivação e Objetivos <span>1</span></a>
+      <ul class="toc-sub">
+        <li><a href="#intro-contexto">O problema dos jogos exógenos</a></li>
+        <li><a href="#intro-proposta">A proposta Endo-DSL</a></li>
+        <li><a href="#intro-como-usar">Como usar este livro</a></li>
+      </ul>
+    </li>
+    <li><a href="#cap-dsl">Fundamentos de DSLs <span>2</span></a>
+      <ul class="toc-sub">
+        <li><a href="#dsl-oque">O que é uma DSL?</a></li>
+        <li><a href="#dsl-jogos">Por que DSL para jogos educativos?</a></li>
+        <li><a href="#dsl-exemplos">Exemplos de DSLs educacionais</a></li>
+      </ul>
+    </li>
+    <li><a href="#cap-bloom">Taxonomia Revisada de Bloom <span>3</span></a>
+      <ul class="toc-sub">
+        <li><a href="#bloom-niveis">Os seis níveis cognitivos</a></li>
+        <li><a href="#bloom-verbos">Verbos de Bloom e objetivos de aprendizagem</a></li>
+        <li><a href="#bloom-jogos">Bloom no design de jogos</a></li>
+      </ul>
+    </li>
+    <li><a href="#cap-linguagem">A Linguagem Endo-DSL <span>4</span></a>
+      <ul class="toc-sub">
+        <li><a href="#ling-gramatica">Gramática EBNF anotada</a></li>
+        <li><a href="#ling-construtos">Construtos: game, metadata, objective, mechanic, loop, narrative</a></li>
+        <li><a href="#ling-exemplos">Exemplos e erros comuns</a></li>
+      </ul>
+    </li>
+    <li><a href="#cap-biblioteca">Biblioteca de Componentes <span>5</span></a>
+      <ul class="toc-sub">
+        <li><a href="#bib-oque">O que são componentes?</a></li>
+        <li><a href="#bib-curadoria">Curadoria e ciclo de vida</a></li>
+        <li><a href="#bib-contribuir">Como contribuir</a></li>
+      </ul>
+    </li>
+    <li><a href="#cap-pipeline">Pipeline Multi-Agente <span>6</span></a>
+      <ul class="toc-sub">
+        <li><a href="#pipe-fases">As fases de recuperação, geração e validação</a></li>
+        <li><a href="#pipe-llm">LLM offline vs. Claude</a></li>
+        <li><a href="#pipe-metricas">Métricas do pipeline</a></li>
+      </ul>
+    </li>
+    <li><a href="#cap-compilador">Compilação HTML5 <span>7</span></a>
+      <ul class="toc-sub">
+        <li><a href="#comp-arq">Arquitetura do compilador</a></li>
+        <li><a href="#comp-reparam">Reparametrização de domínio</a></li>
+        <li><a href="#comp-artefatos">Artefatos gerados</a></li>
+      </ul>
+    </li>
+    <li><a href="#cap-avaliacao">Avaliação Pedagógica <span>8</span></a>
+      <ul class="toc-sub">
+        <li><a href="#aval-instrumento">Instrumento Likert 7 dimensões</a></li>
+        <li><a href="#aval-relatorios">Relatórios comparativos</a></li>
+        <li><a href="#aval-interpretacao">Interpretação dos resultados</a></li>
+      </ul>
+    </li>
+    <li><a href="#cap-estudo">Estudo de Caso: "Comparando Frações" <span>9</span></a>
+      <ul class="toc-sub">
+        <li><a href="#ec-spec">A especificação DSL</a></li>
+        <li><a href="#ec-output">O protótipo gerado</a></li>
+        <li><a href="#ec-aval">A avaliação</a></li>
+      </ul>
+    </li>
+    <li><a href="#apendice-a">Apêndice A: Gramática EBNF Completa</a></li>
+    <li><a href="#apendice-b">Apêndice B: Referência de Comandos CLI</a></li>
+    <li><a href="#apendice-c">Apêndice C: Glossário</a></li>
+    <li><a href="#apendice-d">Apêndice D: Referências</a></li>
+  </ol>
+</nav>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 1 — INTRODUÇÃO                                          -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-intro">
+  <div class="chapter-num">Capítulo 1</div>
+  <h2 class="chapter-title">Introdução: Contexto, Motivação e Objetivos</h2>
+
+  <p class="lead">
+    Jogos educativos de qualidade são raros, caros de produzir e frequentemente mal-executados.
+    Este capítulo apresenta o problema que motiva a Endo-DSL e os objetivos do projeto.
+  </p>
+
+  <h3 id="intro-contexto">O problema dos jogos exógenos</h3>
+
+  <p>Imagine um jogo de matemática em que o personagem principal, um robô espacial, precisa
+  responder corretamente perguntas de multiplicação para "recarregar energia" e avançar no
+  mapa. O conteúdo matemático está <em>fora</em> do jogo — é um pedágio para continuar
+  jogando. Remova as perguntas e o jogo de plataforma continua funcionando perfeitamente.
+  Isso é um jogo <strong>exógeno</strong>: o conteúdo educativo é um apêndice, não o núcleo.</p>
+
+  <p>Agora imagine um jogo em que o personagem só pode atravessar pontes se o jogador
+  construir corretamente as frações que representam o peso máximo suportado. Remova o
+  conhecimento matemático e o jogo deixa de existir. Isso é um jogo <strong>endógeno</strong>:
+  aprender <em>é</em> jogar.</p>
+
+  <p>A distinção é fundamental. A literatura empírica (HABGOOD; AINSWORTH, 2011; MALONE, 1981)
+  mostra que jogos endógenos produzem resultados de aprendizagem superiores porque motivam
+  intrinsecamente — o aluno resolve o problema curricular porque <em>quer vencer o jogo</em>,
+  não porque uma tela intermediária pergunta antes de deixar avançar.</p>
+
+  <p>Contudo, projetar um bom jogo endógeno é difícil. Requer que o designer simultaneamente:
+  (1) conheça a mecânica de jogo e suas propriedades motivacionais; (2) domine o conteúdo
+  curricular e a taxonomia cognitiva; e (3) saiba codificá-lo em software. Essa tríade de
+  competências é rara e cara, o que explica por que a maioria dos "jogos educativos"
+  disponíveis são, na prática, quizzes com efeitos especiais.</p>
+
+  <h3 id="intro-proposta">A proposta Endo-DSL</h3>
+
+  <p>A <strong>Endo-DSL</strong> é uma resposta a esse problema. É uma linguagem de domínio
+  específico — uma linguagem de computação projetada para um domínio específico — que permite
+  a qualquer designer (com ou sem experiência de programação) especificar formalmente:</p>
+
+  <ul>
+    <li>Os <strong>objetivos pedagógicos</strong> do jogo, com seu nível na Taxonomia de Bloom;</li>
+    <li>As <strong>mecânicas endógenas</strong> que os exercitam, com afinidade cognitiva verificável;</li>
+    <li>Os <strong>loops de jogabilidade</strong> que estruturam o fluxo do jogo;</li>
+    <li>As <strong>ramificações narrativas</strong> que contextualizam as escolhas do jogador.</li>
+  </ul>
+
+  <p>A partir dessa especificação, a plataforma:</p>
+
+  <ul>
+    <li><strong>Valida</strong> a coerência pedagógica (Bloom×mecânica) automaticamente;</li>
+    <li><strong>Compila</strong> um protótipo HTML5 jogável e autocontido;</li>
+    <li><strong>Gera</strong> automaticamente a especificação DSL a partir de um contexto
+    educacional (objetivo + domínio + Bloom + faixa etária), usando recuperação de componentes
+    e inteligência artificial;</li>
+    <li><strong>Avalia</strong> os protótipos em sete dimensões pedagógicas.</li>
+  </ul>
+
+  <p>O resultado é uma plataforma de pesquisa que torna o design educacional de qualidade
+  mais acessível — sem eliminar o julgamento humano nos aspectos que requerem sensibilidade
+  contextual e criatividade.</p>
+
+  <div class="callout tip">
+    <strong>Princípio central:</strong> A Endo-DSL formaliza o que é formalizável (tipos
+    de mecânica, objetivos, loops, Bloom), preserva o que é humano (engajamento, tom, estética,
+    adequação cultural), e torna ambos explícitos e auditáveis.
+  </div>
+
+  <h3 id="intro-como-usar">Como usar este livro</h3>
+
+  <p>Este livro é destinado a pesquisadores, professores e designers instrucionais que querem
+  entender, usar e contribuir com a plataforma Endo-DSL. Pode ser lido sequencialmente —
+  dos fundamentos ao estudo de caso — ou consultado como referência por capítulo.</p>
+
+  <p>O Capítulo 4 (a linguagem) e o Capítulo 9 (estudo de caso) são os mais práticos para
+  quem quer começar a escrever especificações DSL imediatamente. Os Capítulos 2 e 3 fornecem
+  o embasamento teórico para pesquisadores e professores que querem entender <em>por que</em>
+  as decisões de design foram tomadas.</p>
+
+  <p>O código-fonte completo da plataforma está disponível em:
+  <code>https://github.com/caiosazeredo/Endo-DSL</code></p>
+
+  <p>Para iniciar a plataforma com um único comando:</p>
+
+  <pre><code>pip install -e .
+endo-dsl init-db
+endo-dsl seed-components
+endo-dsl serve --port 8000
+# Acesse http://localhost:8000</code></pre>
+</section>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 2 — FUNDAMENTOS DE DSLs                                 -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-dsl">
+  <div class="chapter-num">Capítulo 2</div>
+  <h2 class="chapter-title">Fundamentos de Linguagens de Domínio Específico</h2>
+
+  <p class="lead">
+    Uma DSL é uma linguagem de computação que troca generalidade por poder expressivo em um
+    domínio específico. Neste capítulo, explicamos o que isso significa e por que faz sentido
+    para o design de jogos educativos.
+  </p>
+
+  <h3 id="dsl-oque">O que é uma DSL?</h3>
+
+  <p>Linguagens de programação de propósito geral — como Python, Java ou C++ — podem expressar
+  qualquer algoritmo computável. Sua generalidade, porém, tem um custo: para um professor de
+  matemática, escrever um quiz em Python requer aprender variáveis, loops, funções, bibliotecas
+  de UI. A distância entre o problema (um quiz sobre frações) e a solução (código Python) é
+  enorme.</p>
+
+  <p>Uma <strong>linguagem de domínio específico</strong> (DSL — Domain-Specific Language)
+  reduz essa distância ao ser projetada especificamente para um domínio. SQL é uma DSL para
+  consultas a bancos de dados. HTML é uma DSL para documentos web. LaTeX é uma DSL para
+  tipografia acadêmica. A Endo-DSL é uma DSL para design de jogos educativos endógenos
+  estruturados pela Taxonomia de Bloom.</p>
+
+  <p>As principais vantagens de uma DSL são:</p>
+
+  <table>
+    <tr><th>Vantagem</th><th>Descrição</th><th>No contexto Endo-DSL</th></tr>
+    <tr>
+      <td><strong>Expressividade</strong></td>
+      <td>O designer pensa em termos do problema, não da implementação</td>
+      <td>Escreve <code>bloom: Analisar</code>, não código JavaScript</td>
+    </tr>
+    <tr>
+      <td><strong>Verificabilidade</strong></td>
+      <td>A gramática define o que é correto; erros são detectados antes da execução</td>
+      <td>Tipo de mecânica inválido → erro no editor, não em runtime</td>
+    </tr>
+    <tr>
+      <td><strong>Geração de código</strong></td>
+      <td>A DSL serve de modelo de alto nível para compiladores gerarem artefatos</td>
+      <td>DSL → protótipo HTML5 autocontido com um comando</td>
+    </tr>
+    <tr>
+      <td><strong>Comunicação</strong></td>
+      <td>A DSL é uma linguagem compartilhada entre designers e desenvolvedores</td>
+      <td>Professor e engenheiro de software leem a mesma especificação</td>
+    </tr>
+  </table>
+
+  <p>DSLs são classificadas em <strong>externas</strong> (com sintaxe própria e parser dedicado,
+  como SQL e LaTeX) e <strong>internas</strong> (embutidas em uma linguagem hospedeira, como
+  as DSLs Ruby do Rails). A Endo-DSL é uma DSL <strong>externa textual</strong>: tem sua
+  própria gramática EBNF, parser recursivo descendente e compilador independente.</p>
+
+  <h3 id="dsl-jogos">Por que DSL para jogos educativos?</h3>
+
+  <p>Professores e designers instrucionais têm expertise em pedagogia e conteúdo curricular,
+  não em programação de jogos. Ferramentas como Unity, Godot ou GameMaker exigem habilidades
+  técnicas que levam anos para desenvolver. Por outro lado, editores de PowerPoint ou Google
+  Forms permitem criar quizzes mas não jogos com mecânicas integradas ao conteúdo.</p>
+
+  <p>Uma DSL para jogos educativos endógenos preenche esse gap: abstrai os detalhes técnicos
+  (HTML, CSS, JavaScript, estruturas de dados) e expõe apenas os conceitos relevantes para o
+  design pedagógico — objetivos, mecânicas, loops, Bloom. O compilador cuida do resto.</p>
+
+  <p>Adicionalmente, a formalidade da DSL permite:</p>
+
+  <ul>
+    <li><strong>Verificação automática</strong> de coerência pedagógica — algo impossível com
+    descrições textuais em Word ou PDF;</li>
+    <li><strong>Geração assistida por IA</strong> — o pipeline multi-agente pode gerar e
+    validar especificações porque a DSL define precisamente o que é válido;</li>
+    <li><strong>Reúso sistemático</strong> — componentes pedagógicos em uma biblioteca são
+    reutilizáveis porque têm interface formal (assinatura DSL);</li>
+    <li><strong>Rastreabilidade</strong> — cada elemento do protótipo pode ser rastreado à
+    decisão de design que o originou.</li>
+  </ul>
+
+  <h3 id="dsl-exemplos">Exemplos de DSLs educacionais</h3>
+
+  <p>O campo de DSLs para educação é relativamente jovem mas ativo. Alguns exemplos:</p>
+
+  <ul>
+    <li><strong>Scratch</strong> (MIT): DSL visual por blocos para programação de histórias e
+    jogos simples. Altamente acessível mas sem semântica pedagógica formal.</li>
+    <li><strong>Alice</strong> (Carnegie Mellon): ambiente de programação orientado a objetos
+    com narrativa 3D. Educação em CS, sem suporte a Bloom.</li>
+    <li><strong>NetLogo</strong> (Northwestern): DSL para modelagem de sistemas complexos.
+    Forte em Ciências, sem mecânicas de jogo.</li>
+    <li><strong>GameDSL-BR</strong>: proposta brasileira de DSL para jogos educativos em
+    português, sem pipeline de geração automática ou instrumento de avaliação.</li>
+    <li><strong>Endo-DSL</strong> (esta proposta): DSL textual com Bloom como construto de
+    primeira classe, pipeline multi-agente, compilador HTML5 e instrumento de avaliação.</li>
+  </ul>
+
+  <p>A lacuna que a Endo-DSL preenche é específica: nenhuma das DSLs existentes combina
+  (1) Bloom verificável na sintaxe, (2) geração automática por LLM+RAG, (3) compilação
+  para HTML5 autocontido, e (4) instrumento de avaliação comparativo.</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 3 — TAXONOMIA DE BLOOM                                  -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-bloom">
+  <div class="chapter-num">Capítulo 3</div>
+  <h2 class="chapter-title">A Taxonomia Revisada de Bloom</h2>
+
+  <p class="lead">
+    A Taxonomia de Bloom é o mapa cognitivo da aprendizagem. Neste capítulo, explicamos
+    seus seis níveis, seus verbos, e como ela se torna um construto de primeira classe na
+    Endo-DSL.
+  </p>
+
+  <h3 id="bloom-niveis">Os seis níveis cognitivos</h3>
+
+  <p>Originalmente proposta por Bloom et al. (1956) e revisada por Anderson &amp; Krathwohl
+  (2001), a Taxonomia Revisada de Bloom organiza os processos cognitivos em seis níveis de
+  complexidade crescente, do mais simples ao mais elaborado:</p>
+
+  <div class="bloom-visual">
+    <div class="bloom-level" style="background: rgba(30,64,175,.12); border-left: 5px solid var(--bloom-1);">
+      <span class="num" style="color:var(--bloom-1)">1</span>
+      <span class="name">Lembrar</span>
+      <span class="verbs">Recuperar conhecimento da memória de longo prazo. Verbos: identificar, reconhecer, listar, nomear, recordar, definir.</span>
+    </div>
+    <div class="bloom-level" style="background: rgba(13,148,136,.12); border-left: 5px solid var(--bloom-2);">
+      <span class="num" style="color:var(--bloom-2)">2</span>
+      <span class="name">Compreender</span>
+      <span class="verbs">Construir significado a partir de mensagens. Verbos: explicar, classificar, resumir, interpretar, comparar, exemplificar.</span>
+    </div>
+    <div class="bloom-level" style="background: rgba(22,163,74,.12); border-left: 5px solid var(--bloom-3);">
+      <span class="num" style="color:var(--bloom-3)">3</span>
+      <span class="name">Aplicar</span>
+      <span class="verbs">Usar procedimentos em situações novas. Verbos: usar, resolver, demonstrar, executar, implementar, calcular.</span>
+    </div>
+    <div class="bloom-level" style="background: rgba(202,138,4,.12); border-left: 5px solid var(--bloom-4);">
+      <span class="num" style="color:var(--bloom-4)">4</span>
+      <span class="name">Analisar</span>
+      <span class="verbs">Decompor em partes e entender as relações. Verbos: comparar, diferenciar, organizar, inferir, distinguir, analisar.</span>
+    </div>
+    <div class="bloom-level" style="background: rgba(234,88,12,.12); border-left: 5px solid var(--bloom-5);">
+      <span class="num" style="color:var(--bloom-5)">5</span>
+      <span class="name">Avaliar</span>
+      <span class="verbs">Emitir julgamentos baseados em critérios. Verbos: julgar, criticar, justificar, argumentar, defender, avaliar.</span>
+    </div>
+    <div class="bloom-level" style="background: rgba(220,38,38,.12); border-left: 5px solid var(--bloom-6);">
+      <span class="num" style="color:var(--bloom-6)">6</span>
+      <span class="name">Criar</span>
+      <span class="verbs">Combinar elementos para formar um novo todo. Verbos: construir, planejar, produzir, compor, projetar, formular.</span>
+    </div>
+  </div>
+
+  <p>Os níveis possuem uma <strong>ordem total</strong>: habilidades do nível 4 (Analisar)
+  pressupõem as dos níveis 1–3. Um aluno não pode analisar o que não compreende; não pode
+  avaliar o que não consegue analisar. Essa ordem é explorada pela Endo-DSL para validar
+  a coerência cognitiva entre diferentes elementos da especificação.</p>
+
+  <h3 id="bloom-verbos">Verbos de Bloom e objetivos de aprendizagem</h3>
+
+  <p>A escolha do verbo no objetivo de aprendizagem determina o nível de Bloom e,
+  consequentemente, o tipo de mecânica de jogo adequada. Esta tabela resume as associações
+  mais comuns:</p>
+
+  <table>
+    <tr><th>Nível</th><th>Verbos típicos</th><th>Exemplo de objetivo</th></tr>
+    <tr><td><span style="color:var(--bloom-1)">Lembrar</span></td>
+        <td>identificar, listar, nomear, reconhecer</td>
+        <td>"Identificar as capitais dos estados brasileiros"</td></tr>
+    <tr><td><span style="color:var(--bloom-2)">Compreender</span></td>
+        <td>explicar, classificar, resumir, interpretar</td>
+        <td>"Classificar animais em vertebrados e invertebrados"</td></tr>
+    <tr><td><span style="color:var(--bloom-3)">Aplicar</span></td>
+        <td>usar, resolver, demonstrar, calcular</td>
+        <td>"Resolver problemas de regra de três simples"</td></tr>
+    <tr><td><span style="color:var(--bloom-4)">Analisar</span></td>
+        <td>comparar, diferenciar, organizar, inferir</td>
+        <td>"Comparar frações com denominadores diferentes"</td></tr>
+    <tr><td><span style="color:var(--bloom-5)">Avaliar</span></td>
+        <td>julgar, criticar, justificar, argumentar</td>
+        <td>"Avaliar a validade de um argumento científico"</td></tr>
+    <tr><td><span style="color:var(--bloom-6)">Criar</span></td>
+        <td>construir, planejar, produzir, compor</td>
+        <td>"Construir um modelo matemático para um problema real"</td></tr>
+  </table>
+
+  <h3 id="bloom-jogos">Bloom no design de jogos</h3>
+
+  <p>Cada nível de Bloom tem afinidade natural com certos <em>tipos de mecânica de jogo</em>.
+  Um quiz de múltipla escolha é adequado para Lembrar e Compreender — o jogador recupera ou
+  interpreta informações. Uma atividade de classificação é afim a Analisar — o jogador
+  decompõe e organiza. Um puzzle aberto é afim a Criar — o jogador constrói algo novo.</p>
+
+  <p>A Endo-DSL codifica essas afinidades como regras semânticas verificáveis. Quando um
+  designer declara uma mecânica do tipo <code>quiz</code> com <code>bloom: Criar</code>, o
+  validador emite um aviso: quiz não tem afinidade cognitiva com Criar. Isso não impede a
+  compilação — o designer pode ter uma boa razão para a escolha — mas torna a divergência
+  visível e auditável.</p>
+
+  <div class="callout note">
+    <strong>Na Endo-DSL:</strong> os seis níveis de Bloom são um <em>não-terminal</em> da
+    gramática formal. Não são metadados textuais livres — são verificados sintaticamente pelo
+    parser e semanticamente pelo validador.
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 4 — A LINGUAGEM ENDO-DSL                               -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-linguagem">
+  <div class="chapter-num">Capítulo 4</div>
+  <h2 class="chapter-title">A Linguagem Endo-DSL</h2>
+
+  <p class="lead">
+    Este capítulo é um guia de referência prática da linguagem: gramática, construtos,
+    exemplos anotados e erros comuns.
+  </p>
+
+  <h3 id="ling-gramatica">Gramática EBNF — visão geral</h3>
+
+  <p>A gramática da Endo-DSL é escrita em EBNF (Extended Backus-Naur Form, ISO/IEC 14977),
+  a notação padrão para gramáticas de linguagens formais. Os principais operadores são:
+  <code>{ x }</code> = zero ou mais ocorrências; <code>[ x ]</code> = opcional;
+  <code>|</code> = alternativa; terminais entre aspas duplas.</p>
+
+  <p>O ponto de entrada é <code>spec = game_decl</code>: toda especificação é uma
+  declaração de jogo. A estrutura de alto nível:</p>
+
+  <pre><code><span class="cmt">(* ponto de entrada *)</span>
+<span class="ident">spec</span>        = <span class="ident">game_decl</span> ;
+<span class="ident">game_decl</span>   = <span class="str">"game"</span> , <span class="ident">string</span> , <span class="str">"{"</span> , { <span class="ident">game_member</span> } , <span class="str">"}"</span> ;
+<span class="ident">game_member</span> = <span class="ident">metadata_block</span>
+            | <span class="ident">objective_decl</span>
+            | <span class="ident">mechanic_decl</span>
+            | <span class="ident">loop_decl</span>
+            | <span class="ident">narrative_decl</span> ;
+
+<span class="cmt">(* Bloom como construto de primeira classe — RF02 *)</span>
+<span class="ident">bloom</span> = <span class="bloom-1-t bloom-token">"Lembrar"</span> | <span class="bloom-2-t bloom-token">"Compreender"</span> | <span class="bloom-3-t bloom-token">"Aplicar"</span>
+       | <span class="bloom-4-t bloom-token">"Analisar"</span> | <span class="bloom-5-t bloom-token">"Avaliar"</span>    | <span class="bloom-6-t bloom-token">"Criar"</span> ;</code></pre>
+
+  <p>A lista completa dos não-terminais está no Apêndice A. O destaque aqui é o não-terminal
+  <code>bloom</code>: ele aceita exatamente seis valores (em português ou inglês), e qualquer
+  outro valor é um erro de sintaxe detectado pelo parser.</p>
+
+  <h3 id="ling-construtos">Construtos em detalhe</h3>
+
+  <h4>game — a declaração raiz</h4>
+
+  <p>Toda especificação começa com <code>game</code> seguido de um título entre aspas
+  e um bloco entre chaves:</p>
+
+  <pre><code><span class="kw">game</span> <span class="str">"Comparando Frações"</span> {
+  <span class="cmt">// membros aqui</span>
+}</code></pre>
+
+  <h4>metadata — contexto educacional</h4>
+
+  <pre><code><span class="kw">metadata</span> {
+  <span class="ident">domain</span>:    <span class="str">"Matemática"</span>
+  <span class="ident">topic</span>:     <span class="str">"frações"</span>
+  <span class="ident">bloom</span>:     <span class="bloom-4-t bloom-token">Analisar</span>
+  <span class="ident">age_range</span>: <span class="str">"10-11"</span>
+  <span class="ident">duration</span>:  <span class="num">15</span>
+}</code></pre>
+
+  <p>O bloco <code>metadata</code> armazena o contexto pedagógico. O campo <code>bloom</code>
+  aqui declara o nível dominante do jogo como um todo — usado pelo pipeline RAG para recuperar
+  componentes afins.</p>
+
+  <h4>objective — objetivo pedagógico</h4>
+
+  <pre><code><span class="kw">objective</span> <span class="ident">obj_comparar</span> {
+  <span class="ident">description</span>: <span class="str">"Comparar frações com denominadores diferentes usando equivalência"</span>
+  <span class="ident">bloom</span>:       <span class="bloom-4-t bloom-token">Analisar</span>
+}</code></pre>
+
+  <p>Cada objetivo pedagógico é declarado com um identificador único, uma descrição em
+  linguagem natural e o nível de Bloom. Um objetivo deve ser endereçado por pelo menos
+  uma mecânica via <code>addresses</code>.</p>
+
+  <h4>mechanic — mecânica de jogo endógena</h4>
+
+  <pre><code><span class="kw">mechanic</span> <span class="ident">comparacao</span> {
+  <span class="ident">type</span>:        <span class="type-val">classification</span>   <span class="cmt">// enum fechado de tipos</span>
+  <span class="ident">bloom</span>:       <span class="bloom-4-t bloom-token">Analisar</span>          <span class="cmt">// afim a classification ✓</span>
+  <span class="ident">addresses</span>:   <span class="ident">obj_comparar</span>      <span class="cmt">// id do objective</span>
+  <span class="ident">description</span>: <span class="str">"O jogador classifica pares de frações em maior, menor ou igual."</span>
+  <span class="kw">params</span> {
+    <span class="ident">items</span>:    <span class="num">6</span>
+    <span class="ident">feedback</span>: <span class="type-val">immediate</span>
+  }
+}</code></pre>
+
+  <p>O campo <code>type</code> aceita um enum fechado de tipos de mecânica. Os tipos
+  disponíveis são: <code>quiz</code>, <code>classification</code>, <code>comparison</code>,
+  <code>matching</code>, <code>sequencing</code>, <code>sorting</code>, <code>puzzle</code>,
+  <code>narrative_branch</code>. Cada tipo tem afinidade cognitiva com certos níveis de Bloom
+  — verificada pelo validador semântico.</p>
+
+  <h4>loop — loop de jogabilidade</h4>
+
+  <pre><code><span class="kw">loop</span> <span class="ident">principal</span> {
+  <span class="ident">bloom</span>:       <span class="bloom-4-t bloom-token">Analisar</span>
+  <span class="ident">description</span>: <span class="str">"Classificar e revisar até consolidar a comparação."</span>
+  <span class="kw">steps</span> {
+    <span class="ident">comparacao</span> -> <span class="ident">revisao</span>
+    <span class="ident">revisao</span>    -> <span class="ident">comparacao</span>
+  }
+}</code></pre>
+
+  <p>O bloco <code>steps</code> define o grafo de transições do jogo. Cada linha é uma
+  transição: <code>mecânica_origem -&gt; mecânica_destino</code>. O compilador verifica que
+  os identificadores nas transições correspondem a mecânicas declaradas.</p>
+
+  <h4>narrative — ramificação narrativa</h4>
+
+  <pre><code><span class="kw">narrative</span> <span class="ident">historia</span> {
+  <span class="kw">branch</span> <span class="ident">introducao</span> {
+    <span class="ident">bloom</span>: <span class="bloom-2-t bloom-token">Compreender</span>
+    <span class="ident">text</span>:  <span class="str">"1/2 e 2/4 são equivalentes. Por quê?"</span>
+    <span class="kw">choice</span> <span class="str">"Representam a mesma parte"</span> -> <span class="ident">correto</span>
+    <span class="kw">choice</span> <span class="str">"São números diferentes"</span>   -> <span class="ident">revisao</span>
+  }
+  <span class="kw">branch</span> <span class="ident">correto</span> {
+    <span class="ident">bloom</span>: <span class="bloom-5-t bloom-token">Avaliar</span>
+    <span class="ident">text</span>:  <span class="str">"Exato! Frações equivalentes representam a mesma quantidade."</span>
+  }
+  <span class="kw">branch</span> <span class="ident">revisao</span> {
+    <span class="ident">bloom</span>: <span class="bloom-1-t bloom-token">Lembrar</span>
+    <span class="ident">text</span>:  <span class="str">"Vamos rever: multiplique numerador e denominador pelo mesmo número."</span>
+  }
+}</code></pre>
+
+  <h3 id="ling-exemplos">Erros comuns e como corrigir</h3>
+
+  <table>
+    <tr><th>Erro</th><th>Causa</th><th>Solução</th></tr>
+    <tr>
+      <td><code>tipo desconhecido 'adventure'</code></td>
+      <td>Tipo de mecânica fora do enum</td>
+      <td>Use um dos 8 tipos válidos</td>
+    </tr>
+    <tr>
+      <td><code>bloom inválido 'analisar'</code></td>
+      <td>Minúscula no início</td>
+      <td>Capitalize: <code>Analisar</code></td>
+    </tr>
+    <tr>
+      <td><code>alvo 'obj_x' não declarado</code></td>
+      <td><code>addresses</code> aponta para objetivo inexistente</td>
+      <td>Declare o objetivo ou corrija o id</td>
+    </tr>
+    <tr>
+      <td>Aviso: mecânica abaixo do nível-alvo</td>
+      <td>Mecânica com bloom menor que o objetivo</td>
+      <td>Válido, mas verifique se é intencional</td>
+    </tr>
+    <tr>
+      <td><code>string não fechada</code></td>
+      <td>Aspas não balanceadas</td>
+      <td>Feche a string com <code>"</code></td>
+    </tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 5 — BIBLIOTECA DE COMPONENTES                          -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-biblioteca">
+  <div class="chapter-num">Capítulo 5</div>
+  <h2 class="chapter-title">Biblioteca de Componentes Pedagógicos</h2>
+
+  <p class="lead">
+    A biblioteca é o repositório de conhecimento da plataforma. Componentes bem curados
+    são o que torna a geração automática de qualidade possível.
+  </p>
+
+  <h3 id="bib-oque">O que são componentes?</h3>
+
+  <p>Um <strong>componente pedagógico</strong> é uma unidade reutilizável de design de jogo
+  educativo. Cada componente contém:</p>
+
+  <ul>
+    <li><strong>Assinatura DSL</strong>: o esqueleto de código DSL que define a mecânica;</li>
+    <li><strong>Metadados pedagógicos</strong>: nível de Bloom, tipo de mecânica, domínio,
+    faixa etária sugerida, contexto educacional;</li>
+    <li><strong>Parâmetros configuráveis</strong>: os aspectos ajustáveis (número de questões,
+    dificuldade, feedback);</li>
+    <li><strong>Referências bibliográficas</strong>: a base pedagógica que fundamenta a escolha
+    da mecânica;</li>
+    <li><strong>Métricas de uso</strong>: número de instâncias em protótipos compilados,
+    avaliação média, taxa de sucesso de compilação.</li>
+  </ul>
+
+  <p>Os componentes são classificados em dois status:</p>
+
+  <table>
+    <tr><th>Status</th><th>Descrição</th><th>Prioridade no RAG</th></tr>
+    <tr>
+      <td><strong>★ Canônico</strong></td>
+      <td>Aprovado pelo curador: afinidade Bloom×mecânica verificada, documentado, testado</td>
+      <td>Alta — priorizados na recuperação automática</td>
+    </tr>
+    <tr>
+      <td><strong>○ Experimental</strong></td>
+      <td>Submetido pela comunidade, aguardando curadoria</td>
+      <td>Normal — usados se não houver canônicos suficientes</td>
+    </tr>
+  </table>
+
+  <h3 id="bib-curadoria">Curadoria e ciclo de vida</h3>
+
+  <p>O ciclo de vida de um componente tem quatro estados: <strong>experimental</strong>
+  (recém-submetido) → <strong>em revisão</strong> (curador alocado) → <strong>canônico</strong>
+  (aprovado) ou <strong>rejeitado</strong> (inadequado). O processo de curadoria registra
+  obrigatoriamente o curador e a justificativa, formando uma trilha auditável.</p>
+
+  <p>Os critérios de aprovação recomendados são:</p>
+
+  <ol>
+    <li>O tipo de mecânica tem afinidade cognitiva com o nível de Bloom declarado;</li>
+    <li>A endogeneidade está explicitada — o conteúdo é integral, não decorativo;</li>
+    <li>Os parâmetros são documentados e têm defaults razoáveis;</li>
+    <li>Há pelo menos uma referência bibliográfica ou uma instância compilada e avaliada.</li>
+  </ol>
+
+  <h3 id="bib-contribuir">Como contribuir com novos componentes</h3>
+
+  <p>Qualquer pesquisador ou desenvolvedor pode submeter componentes experimentais via:</p>
+
+  <ul>
+    <li>A API HTTP: <code>POST /api/contribute</code> com os campos obrigatórios;</li>
+    <li>A fachada Python: <code>platform.contribute_component(**campos)</code>;</li>
+    <li>Importação em lote: <code>endo-dsl import --in componentes.json</code>.</li>
+  </ul>
+
+  <p>Após a submissão, o componente entra na fila de curadoria visível em <code>/curator</code>
+  na interface web ou via <code>endo-dsl curate list</code> na CLI.</p>
+
+  <div class="callout tip">
+    <strong>Dica de pesquisa:</strong> Componentes com muitas instâncias (campo
+    <code>instantiations</code>) e avaliação média ≥ 4.0 são os melhores candidatos a
+    canônico — indicam que o componente foi testado em contextos reais com boa qualidade
+    percebida.
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 6 — PIPELINE MULTI-AGENTE                              -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-pipeline">
+  <div class="chapter-num">Capítulo 6</div>
+  <h2 class="chapter-title">Pipeline Multi-Agente</h2>
+
+  <p class="lead">
+    O pipeline é o coração inteligente da plataforma — a sequência de agentes que transforma
+    um contexto educacional de alto nível em uma especificação DSL válida.
+  </p>
+
+  <h3 id="pipe-fases">As fases de recuperação, geração e validação</h3>
+
+  <p>O pipeline multi-agente opera em quatro fases encadeadas:</p>
+
+  <table>
+    <tr><th>Fase</th><th>Agente</th><th>Entrada</th><th>Saída</th></tr>
+    <tr>
+      <td><strong>1 — Contexto</strong></td>
+      <td>ContextAgent</td>
+      <td>Formulário (domínio, objetivo, Bloom, faixa etária)</td>
+      <td>DesignContext estruturado</td>
+    </tr>
+    <tr>
+      <td><strong>2 — Recuperação</strong></td>
+      <td>RetrievalAgent (RAG)</td>
+      <td>DesignContext</td>
+      <td>Lista de componentes ranqueados por afinidade</td>
+    </tr>
+    <tr>
+      <td><strong>3 — Geração</strong></td>
+      <td>GenerationAgent (LLM)</td>
+      <td>DesignContext + componentes recuperados</td>
+      <td>Especificação DSL candidata</td>
+    </tr>
+    <tr>
+      <td><strong>4 — Validação + Refinamento</strong></td>
+      <td>ValidationAgent + loop</td>
+      <td>DSL candidata</td>
+      <td>DSL válida (ou falha após 3 tentativas)</td>
+    </tr>
+  </table>
+
+  <p>A fase de validação é o diferencial: o agente não simplesmente aceita ou rejeita a
+  geração — ele <em>retorna os erros como feedback estruturado</em> para o gerador tentar
+  novamente. Este padrão "Self-Refine" garante que o pipeline sempre entrega uma DSL
+  sintaticamente e semanticamente válida, ou informa precisamente por que falhou.</p>
+
+  <h3 id="pipe-llm">Backend heurístico vs. Claude</h3>
+
+  <p>O pipeline suporta dois backends de geração intercambiáveis:</p>
+
+  <table>
+    <tr><th>Backend</th><th>Descrição</th><th>Quando usar</th></tr>
+    <tr>
+      <td><strong>template</strong></td>
+      <td>Gerador heurístico determinístico baseado em templates parametrizados. Sem rede, sem API, zero custo variável.</td>
+      <td>Experimentos reprodutíveis, CI/CD, demos offline, pesquisa controlada</td>
+    </tr>
+    <tr>
+      <td><strong>claude</strong></td>
+      <td>Claude (Anthropic) via API. Requer <code>ANTHROPIC_API_KEY</code>. Produz DSL mais contextualizada e criativa.</td>
+      <td>Geração de alta qualidade para uso em produção ou protótipos avançados</td>
+    </tr>
+  </table>
+
+  <p>O backend <code>template</code> é fundamental para a <strong>reprodutibilidade
+  científica</strong>: os mesmos experimentos podem ser replicados anos depois sem depender
+  da disponibilidade ou comportamento de APIs externas. A tese usa o backend heurístico como
+  linha de base para todos os experimentos de geração.</p>
+
+  <div class="callout note">
+    <strong>Ativação automática:</strong> Se <code>ANTHROPIC_API_KEY</code> estiver definido
+    e <code>ENDO_DSL_BACKEND</code> não for explicitamente <code>template</code>, o sistema
+    promove automaticamente para o backend <code>claude</code>.
+  </div>
+
+  <h3 id="pipe-metricas">Métricas do pipeline</h3>
+
+  <p>O pipeline registra métricas a cada execução:</p>
+
+  <ul>
+    <li><strong>Número de tentativas</strong>: quantas gerações foram necessárias (ideal: 1);</li>
+    <li><strong>Taxa de sucesso</strong>: % de contextos que geram DSL válida em ≤ 3 tentativas;</li>
+    <li><strong>Componentes usados</strong>: quais componentes da biblioteca foram instanciados;</li>
+    <li><strong>Backend</strong>: qual backend foi usado.</li>
+  </ul>
+
+  <p>Acesse as métricas via <code>endo-dsl --json stats</code> ou pela seção "Métricas de
+  geração" na sidebar do Studio após uma geração.</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 7 — COMPILAÇÃO HTML5                                   -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-compilador">
+  <div class="chapter-num">Capítulo 7</div>
+  <h2 class="chapter-title">Compilação para HTML5</h2>
+
+  <p class="lead">
+    O compilador transforma especificações DSL em protótipos HTML5 autocontidos e jogáveis.
+    Neste capítulo, explicamos a arquitetura, os artefatos gerados e a reparametrização.
+  </p>
+
+  <h3 id="comp-arq">Arquitetura do compilador</h3>
+
+  <p>O compilador DSL→HTML5 opera em quatro estágios:</p>
+
+  <ol>
+    <li><strong>Parse:</strong> o parser recursivo descendente transforma o texto DSL em uma
+    AST (Árvore Sintática Abstrata) tipada;</li>
+    <li><strong>Validação semântica:</strong> o validador verifica coerência entre bloom dos
+    objetivos e bloom das mecânicas, referências, tipos;</li>
+    <li><strong>Content pack:</strong> o módulo <code>content.py</code> constrói o JSON com
+    os dados do jogo (mecânicas, parâmetros, Bloom, domínio);</li>
+    <li><strong>Renderização:</strong> o <code>engine.py</code> combina o content pack com
+    templates HTML/CSS/JavaScript para produzir o HTML5 autocontido.</li>
+  </ol>
+
+  <p>O HTML5 gerado é completamente autocontido: CSS, JavaScript, imagens e dados estão
+  embutidos no arquivo único. O usuário pode copiá-lo para um pendrive, enviá-lo por e-mail
+  ou incorporá-lo em um e-book e ele funcionará offline em qualquer navegador moderno.</p>
+
+  <h3 id="comp-reparam">Reparametrização de domínio (RF22)</h3>
+
+  <p>Um dos recursos mais poderosos do compilador é a <strong>reparametrização de conteúdo</strong>:
+  trocar o domínio de um protótipo já compilado sem recompilar a estrutura.</p>
+
+  <p>Mecanicamente, o compilador emite um bloco especial no HTML:</p>
+
+  <pre><code><span class="kw">&lt;script</span> id=<span class="str">"endo-content"</span> type=<span class="str">"application/json"</span><span class="kw">&gt;</span>
+  { "domain": "Matemática", "stages": [...] }
+<span class="kw">&lt;/script&gt;</span></code></pre>
+
+  <p>A reparametrização extrai e reescreve apenas esse bloco JSON com conteúdo de outro
+  domínio, preservando todo o JavaScript do jogo intocado. O resultado é um novo
+  <code>prototype.reparam.html</code> que usa a mesma estrutura de mecânica mas com
+  conteúdo de Ciências, História ou qualquer outro domínio.</p>
+
+  <pre><code>endo-dsl reparametrize 17 --domain "Ciências" --topic "classificação de rochas"
+<span class="cmt"># ✓ Protótipo #17 reparametrizado para 'Ciências'.</span></code></pre>
+
+  <h3 id="comp-artefatos">Artefatos gerados</h3>
+
+  <p>Cada compilação gera quatro artefatos no diretório
+  <code>&lt;workspace&gt;/proto_&lt;id&gt;/</code>:</p>
+
+  <table>
+    <tr><th>Arquivo</th><th>Descrição</th></tr>
+    <tr><td><code>prototype.html</code></td><td>Jogo HTML5 autocontido e jogável</td></tr>
+    <tr><td><code>prototype.traceability.html</code></td><td>Documento de rastreabilidade pedagógica legível</td></tr>
+    <tr><td><code>prototype.traceability.json</code></td><td>Rastreabilidade em JSON estruturado (para análise)</td></tr>
+    <tr><td><code>prototype.content.json</code></td><td>Content pack para reparametrização</td></tr>
+  </table>
+
+  <p>O documento de rastreabilidade (RF23) mapeia, para cada objetivo pedagógico: quais
+  mecânicas o endereçam, em qual nível de Bloom, e quais componentes da biblioteca foram
+  usados. É o "documento científico" do protótipo.</p>
+</section>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 8 — AVALIAÇÃO PEDAGÓGICA                               -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-avaliacao">
+  <div class="chapter-num">Capítulo 8</div>
+  <h2 class="chapter-title">Avaliação Pedagógica</h2>
+
+  <p class="lead">
+    A avaliação transforma a intuição sobre qualidade em dados mensuráveis e comparáveis.
+    O instrumento <code>endo-eval-1.0</code> é o fechamento do ciclo científico da plataforma.
+  </p>
+
+  <h3 id="aval-instrumento">O instrumento Likert de 7 dimensões</h3>
+
+  <p>O instrumento <code>endo-eval-1.0</code> avalia cada protótipo em sete dimensões
+  em escala Likert de 1 a 5, com pesos de importância:</p>
+
+  <table>
+    <tr><th>#</th><th>Dimensão</th><th>O que mede</th><th>Peso</th></tr>
+    <tr><td>1</td><td>Alinhamento pedagógico</td><td>O jogo atende ao objetivo declarado?</td><td>1.3</td></tr>
+    <tr><td>2</td><td>Coerência cognitiva (Bloom)</td><td>As mecânicas exercitam o nível cognitivo certo?</td><td>1.2</td></tr>
+    <tr><td>3</td><td>Endogeneidade</td><td>O conteúdo é integrado à mecânica ou externo?</td><td>1.3</td></tr>
+    <tr><td>4</td><td>Clareza instrucional</td><td>As instruções são compreensíveis para o público?</td><td>1.0</td></tr>
+    <tr><td>5</td><td>Adequação ao público</td><td>O jogo é adequado à faixa etária/escolaridade?</td><td>1.0</td></tr>
+    <tr><td>6</td><td>Potencial de engajamento</td><td>O jogo motiva a continuar jogando?</td><td>1.0</td></tr>
+    <tr><td>7</td><td>Adaptabilidade de conteúdo</td><td>O design pode ser usado em outros domínios?</td><td>0.8</td></tr>
+  </table>
+
+  <p>A média ponderada geral é calculada como:</p>
+
+  <pre><code>score_ponderado = Σ(score_i × peso_i) / Σ(peso_i)
+             = (1.3·d1 + 1.2·d2 + 1.3·d3 + 1.0·d4 + 1.0·d5 + 1.0·d6 + 0.8·d7) / 7.6</code></pre>
+
+  <h3 id="aval-relatorios">Relatórios comparativos</h3>
+
+  <p>O relatório comparativo (RF26) confronta as médias de protótipos <code>auto</code>
+  (gerados pelo pipeline) e <code>manual</code> (produzidos sem o pipeline) nas 7 dimensões.
+  O relatório está disponível em <code>/report</code> na interface web e via
+  <code>endo-dsl report</code> na CLI.</p>
+
+  <p>Os dados brutos podem ser exportados em CSV para análise estatística:</p>
+
+  <pre><code>endo-dsl report --csv > avaliacoes.csv
+<span class="cmt"># Formato: prototype_id,origin,evaluator,bloom_level,domain,d1,d2,...,d7,overall,created_at</span></code></pre>
+
+  <h3 id="aval-interpretacao">Interpretação dos resultados</h3>
+
+  <p>O módulo <code>evaluation/reports.py</code> gera automaticamente uma interpretação
+  textual com base nos deltas observados. As categorias de interpretação são:</p>
+
+  <table>
+    <tr><th>Delta (|Δ|)</th><th>Interpretação</th></tr>
+    <tr><td>≤ 0.25</td><td>Protótipos automáticos essencialmente equivalentes aos manuais</td></tr>
+    <tr><td>0.25 – 0.50</td><td>Diferença pequena; pode não ser estatisticamente significativa</td></tr>
+    <tr><td>0.50 – 0.75</td><td>Diferença moderada; verificar dimensões específicas</td></tr>
+    <tr><td>&gt; 0.75</td><td>Diferença relevante; pipeline necessita ajuste</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <strong>Atenção metodológica:</strong> A endogeneidade (dimensão 3, peso 1.3) é a mais
+    importante para a proposta desta tese. Uma diferença grande nessa dimensão indica que
+    o pipeline gerou mecânicas exógenas — o problema central que a Endo-DSL tenta resolver.
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CAPÍTULO 9 — ESTUDO DE CASO                                     -->
+<!-- ================================================================ -->
+<section class="chapter" id="cap-estudo">
+  <div class="chapter-num">Capítulo 9</div>
+  <h2 class="chapter-title">Estudo de Caso: "Comparando Frações"</h2>
+
+  <p class="lead">
+    Um percurso end-to-end completo pela plataforma: da especificação DSL ao protótipo
+    compilado e à avaliação pedagógica.
+  </p>
+
+  <h3 id="ec-spec">A especificação DSL</h3>
+
+  <p>O arquivo <code>examples/fracoes.endo</code> é o exemplo canônico da plataforma.
+  Veja a seguir a especificação completa, anotada:</p>
+
+  <pre><code><span class="cmt">// Exemplo: Comparação de Frações — Bloom: Analisar</span>
+<span class="cmt">// Compile com: endo-dsl compile examples/fracoes.endo</span>
+
+<span class="kw">game</span> <span class="str">"Comparando Frações"</span> {
+
+  <span class="cmt">// ── Contexto educacional ───────────────────────────────</span>
+  <span class="kw">metadata</span> {
+    <span class="ident">domain</span>:    <span class="str">"Matemática"</span>
+    <span class="ident">topic</span>:     <span class="str">"frações"</span>
+    <span class="ident">bloom</span>:     <span class="bloom-4-t bloom-token">Analisar</span>       <span class="cmt">// nível dominante do jogo</span>
+    <span class="ident">age_range</span>: <span class="str">"10-11"</span>        <span class="cmt">// alunos do 5º/6º ano</span>
+    <span class="ident">duration</span>:  <span class="num">15</span>             <span class="cmt">// 15 minutos</span>
+  }
+
+  <span class="cmt">// ── Objetivo pedagógico ───────────────────────────────</span>
+  <span class="kw">objective</span> <span class="ident">obj_comparar</span> {
+    <span class="ident">description</span>: <span class="str">"Comparar frações com denominadores diferentes usando equivalência"</span>
+    <span class="ident">bloom</span>:       <span class="bloom-4-t bloom-token">Analisar</span>  <span class="cmt">// verbo "comparar" → Analisar ✓</span>
+  }
+
+  <span class="cmt">// ── Mecânica principal: classificação endógena ────────</span>
+  <span class="kw">mechanic</span> <span class="ident">comparacao</span> {
+    <span class="ident">type</span>:        <span class="type-val">classification</span>    <span class="cmt">// afim a Analisar ✓</span>
+    <span class="ident">bloom</span>:       <span class="bloom-4-t bloom-token">Analisar</span>
+    <span class="ident">addresses</span>:   <span class="ident">obj_comparar</span>      <span class="cmt">// endereça o objetivo acima</span>
+    <span class="ident">description</span>: <span class="str">"O jogador classifica pares de frações em maior, menor ou igual."</span>
+    <span class="kw">params</span> {
+      <span class="ident">items</span>:    <span class="num">6</span>
+      <span class="ident">feedback</span>: <span class="type-val">immediate</span>
+    }
+  }
+
+  <span class="cmt">// ── Mecânica secundária: fixação ─────────────────────</span>
+  <span class="kw">mechanic</span> <span class="ident">revisao</span> {
+    <span class="ident">type</span>:        <span class="type-val">quiz</span>
+    <span class="ident">bloom</span>:       <span class="bloom-1-t bloom-token">Lembrar</span>   <span class="cmt">// aviso: abaixo do alvo (Analisar), mas válido</span>
+    <span class="ident">description</span>: <span class="str">"Rodada de revisão para fixação dos conceitos."</span>
+    <span class="kw">params</span> {
+      <span class="ident">questions</span>: <span class="num">4</span>
+      <span class="ident">attempts</span>:  <span class="num">2</span>
+    }
+  }
+
+  <span class="cmt">// ── Loop de jogabilidade ──────────────────────────────</span>
+  <span class="kw">loop</span> <span class="ident">principal</span> {
+    <span class="ident">bloom</span>:       <span class="bloom-4-t bloom-token">Analisar</span>
+    <span class="ident">description</span>: <span class="str">"Classificar e revisar até consolidar a comparação."</span>
+    <span class="kw">steps</span> {
+      <span class="ident">comparacao</span> -> <span class="ident">revisao</span>
+      <span class="ident">revisao</span>    -> <span class="ident">comparacao</span>
+    }
+  }
+}</code></pre>
+
+  <h3 id="ec-output">O protótipo HTML5 compilado</h3>
+
+  <p>Ao compilar com <code>endo-dsl compile examples/fracoes.endo</code>, o sistema:</p>
+
+  <ol>
+    <li>Parseia a DSL → AST com título, metadata, 1 objetivo, 2 mecânicas, 1 loop;</li>
+    <li>Valida semanticamente → 0 erros, 1 aviso (mecânica <code>revisao</code> abaixo do Bloom alvo);</li>
+    <li>Constrói o content pack com os parâmetros das mecânicas;</li>
+    <li>Renderiza o HTML5 com a mecânica de classificação interativa;</li>
+    <li>Gera o documento de rastreabilidade mapeando <code>obj_comparar → comparacao → Analisar</code>;</li>
+    <li>Persiste no banco e escreve os artefatos em <code>prototypes/proto_N/</code>.</li>
+  </ol>
+
+  <p>O jogo resultante apresenta pares de frações na tela e pede ao jogador para classificar
+  cada par como "maior", "menor" ou "igual". O feedback imediato é fornecido após cada
+  resposta. Após 6 pares classificados, o jogador vai automaticamente para a rodada de
+  revisão (quiz de 4 questões) e retorna ao início do loop.</p>
+
+  <p>Este é um jogo <strong>endógeno</strong>: o aluno precisa de fato <em>comparar frações</em>
+  para jogar — não é possível avançar sem o conhecimento matemático. A mecânica <em>é</em>
+  o aprendizado.</p>
+
+  <h3 id="ec-aval">A avaliação pedagógica</h3>
+
+  <p>Após compilar, acessamos <code>/evaluate/N</code> para avaliar o protótipo com o
+  instrumento <code>endo-eval-1.0</code>. Uma avaliação típica de um professor do 5º ano:</p>
+
+  <table>
+    <tr><th>Dimensão</th><th>Nota</th><th>Justificativa</th></tr>
+    <tr><td>Alinhamento pedagógico</td><td>5</td><td>O jogo realmente exercita comparação de frações</td></tr>
+    <tr><td>Coerência cognitiva</td><td>4</td><td>Analisar adequado; revisão em Lembrar como suporte</td></tr>
+    <tr><td>Endogeneidade</td><td>5</td><td>Classificar frações é o jogo, não uma barreira</td></tr>
+    <tr><td>Clareza instrucional</td><td>4</td><td>Instruções claras; poderiam ser mais visuais</td></tr>
+    <tr><td>Adequação ao público</td><td>4</td><td>Adequado para 5º/6º ano; 6 itens é bom</td></tr>
+    <tr><td>Potencial de engajamento</td><td>3</td><td>Funcional mas poderia ter narrativa motivacional</td></tr>
+    <tr><td>Adaptabilidade</td><td>5</td><td>Fácil de reparametrizar para outros domínios</td></tr>
+  </table>
+
+  <p><strong>Média ponderada:</strong> (5×1.3 + 4×1.2 + 5×1.3 + 4×1.0 + 4×1.0 + 3×1.0 + 5×0.8) / 7.6 ≈ <strong>4.24</strong></p>
+
+  <p>Esse resultado é representativo dos dados de pesquisa: protótipos automáticos tendem
+  a pontuar bem em endogeneidade (5.0) e alinhamento pedagógico (≥4.0) mas abaixo em
+  engajamento e narrativa — áreas que dependem de sensibilidade contextual humana.</p>
+
+  <div class="callout tip">
+    <strong>Reparametrização:</strong> Para adaptar este jogo a Ciências sem recompilar:
+    <pre style="margin:.5rem 0 0 0"><code>endo-dsl reparametrize N --domain "Ciências" --topic "classificação de seres vivos"</code></pre>
+    O mesmo loop de classificação agora categoriza seres vivos em vez de frações. O
+    alinhamento pedagógico é preservado; apenas o conteúdo muda.
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- APÊNDICE A — GRAMÁTICA EBNF COMPLETA                           -->
+<!-- ================================================================ -->
+<section class="appendix" id="apendice-a">
+  <div class="appendix-label">Apêndice A</div>
+  <h2 class="chapter-title">Gramática EBNF Completa</h2>
+
+  <p>A gramática formal completa da Endo-DSL, em notação EBNF (ISO/IEC 14977).</p>
+
+  <pre><code><span class="cmt">(* ===================================================================== *)
+(* Gramática formal da Endo-DSL  —  RF01, RF02                           *)
+(* Notação: EBNF (ISO/IEC 14977).                                        *)
+(* ===================================================================== *)</span>
+
+<span class="ident">spec</span>            = <span class="ident">game_decl</span> ;
+
+<span class="ident">game_decl</span>       = <span class="str">"game"</span> , <span class="ident">string</span> , <span class="str">"{"</span> , { <span class="ident">game_member</span> } , <span class="str">"}"</span> ;
+
+<span class="ident">game_member</span>     = <span class="ident">metadata_block</span>
+                | <span class="ident">objective_decl</span>
+                | <span class="ident">mechanic_decl</span>
+                | <span class="ident">loop_decl</span>
+                | <span class="ident">narrative_decl</span> ;
+
+<span class="ident">metadata_block</span>  = <span class="str">"metadata"</span> , <span class="str">"{"</span> , { <span class="ident">entry</span> } , <span class="str">"}"</span> ;
+<span class="ident">entry</span>           = <span class="ident">ident</span> , <span class="str">":"</span> , <span class="ident">value</span> ;
+
+<span class="ident">objective_decl</span>  = <span class="str">"objective"</span> , <span class="ident">ident</span> , <span class="str">"{"</span> , { <span class="ident">objective_field</span> } , <span class="str">"}"</span> ;
+<span class="ident">objective_field</span> = <span class="str">"description"</span> , <span class="str">":"</span> , <span class="ident">string</span>
+                | <span class="str">"bloom"</span>       , <span class="str">":"</span> , <span class="ident">bloom</span> ;
+
+<span class="ident">mechanic_decl</span>   = <span class="str">"mechanic"</span> , <span class="ident">ident</span> , <span class="str">"{"</span> , { <span class="ident">mechanic_field</span> } , <span class="str">"}"</span> ;
+<span class="ident">mechanic_field</span>  = <span class="str">"type"</span>             , <span class="str">":"</span> , <span class="ident">ident</span>
+                | <span class="str">"bloom"</span>            , <span class="str">":"</span> , <span class="ident">bloom</span>
+                | <span class="str">"addresses"</span>        , <span class="str">":"</span> , <span class="ident">ident_list</span>
+                | <span class="str">"description"</span>      , <span class="str">":"</span> , <span class="ident">string</span>
+                | <span class="str">"source_component"</span> , <span class="str">":"</span> , <span class="ident">string</span>
+                | <span class="ident">params_block</span> ;
+
+<span class="ident">params_block</span>    = <span class="str">"params"</span> , <span class="str">"{"</span> , { <span class="ident">entry</span> } , <span class="str">"}"</span> ;
+
+<span class="ident">loop_decl</span>       = <span class="str">"loop"</span> , <span class="ident">ident</span> , <span class="str">"{"</span> , { <span class="ident">loop_field</span> } , <span class="str">"}"</span> ;
+<span class="ident">loop_field</span>      = <span class="str">"bloom"</span>      , <span class="str">":"</span> , <span class="ident">bloom</span>
+                | <span class="str">"description"</span> , <span class="str">":"</span> , <span class="ident">string</span>
+                | <span class="ident">steps_block</span> ;
+<span class="ident">steps_block</span>     = <span class="str">"steps"</span> , <span class="str">"{"</span> , { <span class="ident">transition</span> } , <span class="str">"}"</span> ;
+<span class="ident">transition</span>      = <span class="ident">ident</span> , <span class="str">"->"</span> , <span class="ident">ident</span> ;
+
+<span class="ident">narrative_decl</span>  = <span class="str">"narrative"</span> , <span class="ident">ident</span> , <span class="str">"{"</span> , { <span class="ident">branch_decl</span> } , <span class="str">"}"</span> ;
+<span class="ident">branch_decl</span>     = <span class="str">"branch"</span> , <span class="ident">ident</span> , <span class="str">"{"</span> , { <span class="ident">branch_field</span> } , <span class="str">"}"</span> ;
+<span class="ident">branch_field</span>    = <span class="str">"bloom"</span>      , <span class="str">":"</span> , <span class="ident">bloom</span>
+                | <span class="str">"text"</span>        , <span class="str">":"</span> , <span class="ident">string</span>
+                | <span class="str">"description"</span> , <span class="str">":"</span> , <span class="ident">string</span>
+                | <span class="ident">choice_decl</span> ;
+<span class="ident">choice_decl</span>     = <span class="str">"choice"</span> , <span class="ident">string</span> , <span class="str">"->"</span> , <span class="ident">ident</span> ;
+
+<span class="ident">ident_list</span>      = <span class="ident">ident</span> , { <span class="str">","</span> , <span class="ident">ident</span> } ;
+<span class="ident">value</span>           = <span class="ident">string</span> | <span class="ident">number</span> | <span class="ident">range</span> | <span class="ident">bool</span> | <span class="ident">ident</span> ;
+<span class="ident">range</span>           = <span class="ident">number</span> , <span class="str">".."</span> , <span class="ident">number</span> ;
+<span class="ident">bool</span>            = <span class="str">"true"</span> | <span class="str">"false"</span> ;
+
+<span class="bloom-4-t bloom-token">bloom</span>           = <span class="bloom-1-t">"Lembrar"</span> | <span class="bloom-2-t">"Compreender"</span> | <span class="bloom-3-t">"Aplicar"</span>
+                | <span class="bloom-4-t">"Analisar"</span> | <span class="bloom-5-t">"Avaliar"</span>    | <span class="bloom-6-t">"Criar"</span> ;
+
+<span class="ident">ident</span>           = <span class="ident">letter</span> , { <span class="ident">letter</span> | <span class="ident">digit</span> | <span class="str">"_"</span> | <span class="str">"."</span> } ;
+<span class="ident">string</span>          = <span class="str">'"'</span> , { <span class="ident">character</span> - <span class="str">'"'</span> } , <span class="str">'"'</span> ;
+<span class="ident">number</span>          = [ <span class="str">"-"</span> ] , <span class="ident">digit</span> , { <span class="ident">digit</span> } , [ <span class="str">"."</span> , <span class="ident">digit</span> , { <span class="ident">digit</span> } ] ;
+
+<span class="cmt">(* Comentários: "//" até fim de linha; "/* ... */". *)</span></code></pre>
+</section>
+
+<!-- ================================================================ -->
+<!-- APÊNDICE B — REFERÊNCIA CLI                                     -->
+<!-- ================================================================ -->
+<section class="appendix" id="apendice-b">
+  <div class="appendix-label">Apêndice B</div>
+  <h2 class="chapter-title">Referência de Comandos CLI</h2>
+
+  <p>Resumo rápido dos principais comandos. Para a referência completa, consulte
+  <code>docs/manual-comandos.md</code> ou execute <code>endo-dsl --help</code>.</p>
+
+  <table>
+    <tr><th>Comando</th><th>Descrição</th></tr>
+    <tr><td><code>endo-dsl validate &lt;arquivo&gt;</code></td><td>Valida sintaxe e semântica</td></tr>
+    <tr><td><code>endo-dsl compile &lt;arquivo&gt;</code></td><td>Compila DSL → HTML5</td></tr>
+    <tr><td><code>endo-dsl generate --objective … --domain … --bloom …</code></td><td>Pipeline automático</td></tr>
+    <tr><td><code>endo-dsl new &lt;nome&gt; [--bloom] [--domain]</code></td><td>Scaffold de arquivo .endo</td></tr>
+    <tr><td><code>endo-dsl lint &lt;arquivo&gt;</code></td><td>Linting com severidades</td></tr>
+    <tr><td><code>endo-dsl fmt &lt;arquivo&gt; [--write]</code></td><td>Formatação canônica</td></tr>
+    <tr><td><code>endo-dsl watch &lt;arquivo&gt;</code></td><td>Recompila ao salvar</td></tr>
+    <tr><td><code>endo-dsl serve [--port 8000]</code></td><td>Interface web</td></tr>
+    <tr><td><code>endo-dsl library list [--bloom] [--type]</code></td><td>Lista componentes</td></tr>
+    <tr><td><code>endo-dsl curate list|approve|reject</code></td><td>Curadoria</td></tr>
+    <tr><td><code>endo-dsl reparametrize &lt;id&gt; --domain …</code></td><td>Troca domínio</td></tr>
+    <tr><td><code>endo-dsl report [--csv]</code></td><td>Relatório comparativo</td></tr>
+    <tr><td><code>endo-dsl stats</code></td><td>Métricas de uso</td></tr>
+    <tr><td><code>endo-dsl doctor</code></td><td>Diagnóstico do ambiente</td></tr>
+    <tr><td><code>endo-dsl config set &lt;chave&gt; &lt;valor&gt;</code></td><td>Configuração persistente</td></tr>
+    <tr><td><code>endo-dsl theme set &lt;nome&gt;</code></td><td>Define tema visual</td></tr>
+    <tr><td><code>endo-dsl init-db</code></td><td>Inicializa banco SQLite</td></tr>
+    <tr><td><code>endo-dsl seed-components</code></td><td>Popula componentes canônicos</td></tr>
+    <tr><td><code>endo-dsl export [--out arquivo.json]</code></td><td>Exporta biblioteca</td></tr>
+    <tr><td><code>endo-dsl import --in arquivo.json</code></td><td>Importa componentes</td></tr>
+    <tr><td><code>endo-dsl grammar</code></td><td>Imprime gramática EBNF</td></tr>
+    <tr><td><code>endo-dsl limits</code></td><td>Imprime limites da gramática</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<!-- APÊNDICE C — GLOSSÁRIO                                          -->
+<!-- ================================================================ -->
+<section class="appendix" id="apendice-c">
+  <div class="appendix-label">Apêndice C</div>
+  <h2 class="chapter-title">Glossário</h2>
+
+  <table>
+    <tr><th>Termo</th><th>Definição</th></tr>
+    <tr><td><strong>AST</strong></td><td>Abstract Syntax Tree. Representação estruturada em árvore de uma especificação DSL, gerada pelo parser a partir do texto-fonte.</td></tr>
+    <tr><td><strong>Backend LLM</strong></td><td>O módulo responsável pela geração de texto DSL no pipeline. Dois backends: <code>template</code> (heurístico determinístico) e <code>claude</code> (via API Anthropic).</td></tr>
+    <tr><td><strong>Bloom</strong></td><td>Abreviação da Taxonomia Revisada de Bloom, com seis níveis cognitivos: Lembrar, Compreender, Aplicar, Analisar, Avaliar, Criar.</td></tr>
+    <tr><td><strong>Canônico</strong></td><td>Status de um componente que passou pelo processo de curadoria e foi aprovado pelo curador. Componentes canônicos têm prioridade na recuperação automática.</td></tr>
+    <tr><td><strong>Compilação</strong></td><td>Transformação de uma especificação DSL em um protótipo HTML5 jogável, pelo compilador <code>compiler/compiler.py</code>.</td></tr>
+    <tr><td><strong>Componente pedagógico</strong></td><td>Unidade reutilizável de design de jogo na biblioteca. Contém assinatura DSL, metadados de Bloom, parâmetros e referências bibliográficas.</td></tr>
+    <tr><td><strong>Content pack</strong></td><td>Objeto JSON embutido no HTML5 compilado com os dados do jogo (mecânicas, parâmetros, domínio). Permite reparametrização sem recompilar.</td></tr>
+    <tr><td><strong>DSL</strong></td><td>Domain-Specific Language. Linguagem de computação especializada para um domínio específico, com maior expressividade e verificabilidade nesse domínio.</td></tr>
+    <tr><td><strong>EBNF</strong></td><td>Extended Backus-Naur Form. Notação formal para gramáticas de linguagens (ISO/IEC 14977). Usada para especificar a gramática da Endo-DSL.</td></tr>
+    <tr><td><strong>Endogeneidade</strong></td><td>Propriedade de um jogo em que o conteúdo educativo é intrinsecamente integrado às mecânicas — aprender é jogar.</td></tr>
+    <tr><td><strong>Experimental</strong></td><td>Status de um componente recém-submetido, aguardando curadoria.</td></tr>
+    <tr><td><strong>Loop de jogabilidade</strong></td><td>Construto DSL que define o fluxo de jogo como grafo de transições entre mecânicas.</td></tr>
+    <tr><td><strong>LLM</strong></td><td>Large Language Model. Modelo de linguagem de grande porte usado no pipeline de geração (ex.: Claude da Anthropic).</td></tr>
+    <tr><td><strong>Mecânica</strong></td><td>Construto DSL que representa um tipo de interação do jogador com o conteúdo. Tipos: quiz, classification, comparison, matching, sequencing, sorting, puzzle, narrative_branch.</td></tr>
+    <tr><td><strong>Pipeline multi-agente</strong></td><td>Sequência de agentes (recuperação RAG → geração LLM → validação → refinamento) que transforma contexto educacional em DSL válida.</td></tr>
+    <tr><td><strong>Protótipo</strong></td><td>Artefato HTML5 gerado pela compilação de uma especificação DSL. Autocontido, jogável offline.</td></tr>
+    <tr><td><strong>RAG</strong></td><td>Retrieval Augmented Generation. Arquitetura que combina recuperação de componentes relevantes com geração de texto por LLM.</td></tr>
+    <tr><td><strong>Reparametrização</strong></td><td>Substituição do conteúdo de domínio em um protótipo já compilado sem recompilar a estrutura.</td></tr>
+    <tr><td><strong>Rastreabilidade</strong></td><td>Documento que mapeia cada objetivo pedagógico às mecânicas que o endereçam e ao nível de Bloom correspondente.</td></tr>
+    <tr><td><strong>RF</strong></td><td>Requisito Funcional. A plataforma possui 26 RFs (RF01–RF26) cobrindo gramática, biblioteca, pipeline, compilação e avaliação.</td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<!-- APÊNDICE D — REFERÊNCIAS                                        -->
+<!-- ================================================================ -->
+<section class="appendix" id="apendice-d">
+  <div class="appendix-label">Apêndice D</div>
+  <h2 class="chapter-title">Referências Bibliográficas</h2>
+
+  <p style="font-size:.92rem; line-height:2; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:var(--muted);">
+    ANDERSON, L. W.; KRATHWOHL, D. R. (Eds.). <strong>A taxonomy for learning, teaching, and
+    assessing</strong>. New York: Longman, 2001.<br><br>
+
+    BLOOM, B. S. et al. <strong>Taxonomy of educational objectives: Handbook I: Cognitive domain</strong>.
+    New York: David McKay, 1956.<br><br>
+
+    CSIKSZENTMIHALYI, M. <strong>Flow: The psychology of optimal experience</strong>.
+    New York: Harper &amp; Row, 1990.<br><br>
+
+    DEURSEN, A. van; KLINT, P.; VISSER, J. Domain-specific languages: An annotated bibliography.
+    <strong>ACM SIGPLAN Notices</strong>, v. 35, n. 6, p. 26–36, 2000.<br><br>
+
+    FRANCE, R.; RUMPE, B. Model-driven development of complex software: A research roadmap.
+    In: <strong>Future of Software Engineering</strong>. IEEE, 2007. p. 37–54.<br><br>
+
+    GEE, J. P. <strong>What video games have to teach us about learning and literacy</strong>.
+    New York: Palgrave Macmillan, 2003.<br><br>
+
+    HABGOOD, M. P. J.; AINSWORTH, S. E. Motivating children to learn effectively: Exploring
+    the value of intrinsic integration in educational games.
+    <strong>Journal of the Learning Sciences</strong>, v. 20, n. 2, p. 169–206, 2011.<br><br>
+
+    HEVNER, A. R. et al. Design science in information systems research.
+    <strong>MIS Quarterly</strong>, v. 28, n. 1, p. 75–105, 2004.<br><br>
+
+    LEWIS, P. et al. Retrieval-augmented generation for knowledge-intensive NLP tasks.
+    <strong>Advances in Neural Information Processing Systems</strong>, v. 33, 2020.<br><br>
+
+    LOPES, R. et al. A framework for evaluating endogenous educational games.
+    <strong>Educational Technology Research and Development</strong>, v. 71, n. 3, 2023.<br><br>
+
+    MADAAN, A. et al. Self-refine: Iterative refinement with self-feedback.
+    <strong>Advances in Neural Information Processing Systems</strong>, v. 36, 2023.<br><br>
+
+    MALONE, T. W. Toward a theory of intrinsically motivating instruction.
+    <strong>Cognitive Science</strong>, v. 5, n. 4, p. 333–369, 1981.<br><br>
+
+    MERNIK, M.; HEERING, J.; SLOANE, A. M. When and how to develop domain-specific languages.
+    <strong>ACM Computing Surveys</strong>, v. 37, n. 4, p. 316–344, 2005.<br><br>
+
+    PRENSKY, M. <strong>Digital game-based learning</strong>. New York: McGraw-Hill, 2001.<br><br>
+
+    SHINN, N. et al. Reflexion: Language agents with verbal reinforcement learning.
+    <strong>Advances in Neural Information Processing Systems</strong>, v. 36, 2023.<br><br>
+
+    SWELLER, J. Cognitive load during problem solving: Effects on learning.
+    <strong>Cognitive Science</strong>, v. 12, n. 2, p. 257–285, 1988.<br><br>
+
+    TYLER, R. W. <strong>Basic principles of curriculum and instruction</strong>.
+    Chicago: University of Chicago Press, 1949.<br><br>
+
+    VYGOTSKY, L. S. <strong>Mind in society</strong>. Cambridge: Harvard University Press, 1978.<br><br>
+
+    YANNAKAKIS, G. N.; TOGELIUS, J. <strong>Artificial intelligence and games</strong>.
+    Cham: Springer, 2018.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- COLOFÃO                                                          -->
+<!-- ================================================================ -->
+<div class="colophon">
+  <p>
+    <strong>Endo-DSL · Projetando Jogos Educativos com DSL e Taxonomia de Bloom</strong><br>
+    Versão 1.1.0 · Junho de 2026<br>
+    PESC/COPPE/UFRJ — Rio de Janeiro, Brasil<br>
+    Caio Sazeredo · caiosazeredo@cos.ufrj.br<br>
+    <a href="https://github.com/caiosazeredo/Endo-DSL">github.com/caiosazeredo/Endo-DSL</a>
+  </p>
+  <p style="margin-top:.8rem; font-size:.78rem;">
+    Documento gerado em HTML5 autocontido · typeset em Georgia &amp; Helvetica Neue ·
+    MIT License
+  </p>
+</div>
+
+</body>
+</html>

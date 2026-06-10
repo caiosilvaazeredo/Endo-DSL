@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "endo-dsl"
+version = "1.1.0"
+description = "Plataforma de design de jogos educativos baseada em DSL e taxonomia de Bloom"
+authors = [{name = "Caio Azeredo", email = "caiosazeredo@cos.ufrj.br"}]
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = []
+
+[project.optional-dependencies]
+llm = ["anthropic>=0.25"]
+
+[project.scripts]
+endo-dsl = "endo_dsl.cli:main"
+endo-dslc = "endo_dsl.compiler_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["endo_dsl*"]
+
+[tool.setuptools.package-data]
+"endo_dsl.db" = ["schema.sql"]
+"endo_dsl.dsl" = ["grammar.ebnf"]
+"endo_dsl.web.static" = ["*.css", "*.js"]

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" font-family="'Segoe UI',Helvetica,Arial,sans-serif">
+  <rect width="1280" height="800" fill="#f1f5f9"/>
+  <rect width="1280" height="56" fill="#1e293b"/>
+  <text x="28" y="35" fill="#fff" font-size="20" font-weight="700">Endo<tspan fill="#4f46e5">-DSL</tspan></text>
+  <g font-size="14" fill="#cbd5e1"><text x="420" y="35">Início</text><text x="510" y="35">Estúdio</text><text x="600" y="35">Biblioteca</text><text x="710" y="35" fill="#fff" font-weight="600">Curadoria</text><text x="815" y="35">Relatórios</text></g>
+  <text x="64" y="110" fill="#0f172a" font-size="30" font-weight="800">Fila de curadoria <tspan fill="#94a3b8" font-size="15" font-weight="400">jornada do curador · RF12</tspan></text>
+  <text x="64" y="140" fill="#475569" font-size="14">Componentes experimentais aguardando revisão. Aprovar promove a canônico (priorizado pela recuperação).</text>
+  <!-- counters -->
+  <rect x="64" y="160" width="160" height="50" rx="8" fill="#fff" stroke="#e2e8f0"/><text x="84" y="192" fill="#f97316" font-size="22" font-weight="800">3</text><text x="118" y="192" fill="#64748b" font-size="13">pendentes</text>
+  <!-- card 1 -->
+  <rect x="64" y="230" width="1152" height="160" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="88" y="266" fill="#0f172a" font-size="18" font-weight="700">Classificação de frações</text>
+  <rect x="370" y="250" width="76" height="22" rx="11" fill="#eab308"/><text x="408" y="265" text-anchor="middle" fill="#1e293b" font-size="11">Analisar</text>
+  <text x="460" y="266" fill="#64748b" font-size="13">classification · #18</text>
+  <text x="980" y="266" fill="#94a3b8" font-size="12">instâncias: 6 · aval.: —</text>
+  <rect x="88" y="282" width="600" height="44" rx="6" fill="#0f172a"/>
+  <text x="100" y="310" fill="#c3e88d" font-family="monospace" font-size="12">mechanic classification { bloom: Analisar; params {...} }</text>
+  <text x="88" y="350" fill="#475569" font-size="13">O jogador classifica pares de frações em maior, menor ou igual.</text>
+  <rect x="730" y="338" width="150" height="38" rx="8" fill="#22c55e"/><text x="805" y="362" text-anchor="middle" fill="#fff" font-size="13">Aprovar → canônico</text>
+  <rect x="892" y="338" width="150" height="38" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="967" y="362" text-anchor="middle" fill="#475569" font-size="13">Solicitar revisão</text>
+  <rect x="1054" y="338" width="130" height="38" rx="8" fill="#ef4444"/><text x="1119" y="362" text-anchor="middle" fill="#fff" font-size="13">Rejeitar</text>
+  <!-- card 2 -->
+  <rect x="64" y="410" width="1152" height="160" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="88" y="446" fill="#0f172a" font-size="18" font-weight="700">Construção de puzzle aberto</text>
+  <rect x="400" y="430" width="58" height="22" rx="11" fill="#ef4444"/><text x="429" y="445" text-anchor="middle" fill="#fff" font-size="11">Criar</text>
+  <text x="472" y="446" fill="#64748b" font-size="13">puzzle · #21</text>
+  <text x="980" y="446" fill="#94a3b8" font-size="12">instâncias: 4 · aval.: 3.8</text>
+  <rect x="88" y="462" width="600" height="44" rx="6" fill="#0f172a"/>
+  <text x="100" y="490" fill="#c3e88d" font-family="monospace" font-size="12">mechanic puzzle { bloom: Criar; params { pieces: 8 } }</text>
+  <text x="88" y="530" fill="#475569" font-size="13">O aprendiz monta uma solução original a partir de peças.</text>
+  <rect x="730" y="518" width="150" height="38" rx="8" fill="#22c55e"/><text x="805" y="542" text-anchor="middle" fill="#fff" font-size="13">Aprovar → canônico</text>
+  <rect x="892" y="518" width="150" height="38" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="967" y="542" text-anchor="middle" fill="#475569" font-size="13">Solicitar revisão</text>
+  <rect x="1054" y="518" width="130" height="38" rx="8" fill="#ef4444"/><text x="1119" y="542" text-anchor="middle" fill="#fff" font-size="13">Rejeitar</text>
+  <!-- trail -->
+  <text x="64" y="616" fill="#0f172a" font-size="16" font-weight="700">Trilha de curadoria recente (RF12)</text>
+  <rect x="64" y="630" width="1152" height="110" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <g font-size="13" fill="#475569">
+    <text x="88" y="662">✓ aprovado · matching.concept · curador: ana@cos.ufrj.br · "alinhamento Bloom verificado"</text>
+    <text x="88" y="690">✎ revisão solicitada · sequencing.steps · curador: bruno@cos.ufrj.br · "rever feedback"</text>
+    <text x="88" y="718">✗ rejeitado · quiz.duplicate · curador: ana@cos.ufrj.br · "duplicata de quiz.basic.recall"</text>
+  </g>
+</svg>

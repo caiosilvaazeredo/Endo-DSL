@@ -1,0 +1,10 @@
+# Endo-DSL runs on the Python 3.10+ standard library alone — no hard dependencies.
+# The packages below are OPTIONAL and only enable extra capabilities:
+#
+#   anthropic   -> plugs the real Claude API into the multi-agent pipeline
+#                  (endo_dsl/agents/llm.py). Without it, a deterministic,
+#                  template-based backend is used so the whole system still
+#                  runs end-to-end offline.
+#
+# Install with:  pip install -r requirements.txt
+anthropic>=0.39.0 ; python_version >= "3.8"

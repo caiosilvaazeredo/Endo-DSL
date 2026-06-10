@@ -1,0 +1,616 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Endo-DSL — Studio IDE (Overleaf-like split-pane, zero deps)
+   ════════════════════════════════════════════════════════════════════════ */
+
+// ── Syntax highlight helpers ────────────────────────────────────────────────
+const _KW = [
+  "game","metadata","objective","mechanic","loop","steps","params",
+  "bloom","type","addresses","description","domain","audience","context",
+  "platform","bloom_target","content","difficulty","title","narrative",
+  "branch","choice"
+];
+const _BLOOM_MAP = {
+  "Lembrar":1,"Compreender":2,"Aplicar":3,"Analisar":4,"Avaliar":5,"Criar":6,
+  "Remember":1,"Understand":2,"Apply":3,"Analyze":4,"Evaluate":5,"Create":6
+};
+const _KW_RE    = new RegExp("\\b(" + _KW.join("|") + ")\\b","g");
+const _BLOOM_RE = new RegExp("\\b(" + Object.keys(_BLOOM_MAP).join("|") + ")\\b","g");
+const _COM_RE   = /(\/\/[^\n]*)/g;
+const _STR_RE   = /("(?:[^"\\]|\\.)*")/g;
+const _NUM_RE   = /\b(\d+(?:\.\d+)?)\b/g;
+
+function _esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function _tokenizeLine(line, errLine){
+  // Extract comment suffix first
+  let code = line, comment = "";
+  const ci = line.indexOf("//");
+  if(ci >= 0){ code = line.slice(0, ci); comment = line.slice(ci); }
+
+  // Protect string literals
+  const strings = [];
+  code = code.replace(_STR_RE, m => { strings.push(m); return "\x00" + (strings.length-1) + "\x00"; });
+
+  let h = _esc(code);
+  h = h.replace(_BLOOM_RE, m => `<span class="tok-b${_BLOOM_MAP[m]}">${m}</span>`);
+  h = h.replace(_KW_RE, m => `<span class="tok-kw">${m}</span>`);
+  h = h.replace(_NUM_RE, m => `<span class="tok-num">${m}</span>`);
+  // Restore strings
+  h = h.replace(/\x00(\d+)\x00/g, (_, i) => `<span class="tok-str">${_esc(strings[+i])}</span>`);
+  if(comment) h += `<span class="tok-com">${_esc(comment)}</span>`;
+
+  const cls = errLine ? ' class="err-line"' : "";
+  return `<span${cls}>${h || "&nbsp;"}</span>`;
+}
+
+// ── Theme manager ───────────────────────────────────────────────────────────
+const THEMES = ["endo","dark","light"];
+
+function _applyTheme(t){
+  document.documentElement.setAttribute("data-theme", t || "endo");
+  try{ localStorage.setItem("endo-theme", t || "endo"); } catch(e){}
+}
+
+function _loadTheme(){
+  try{
+    const t = localStorage.getItem("endo-theme");
+    if(t) _applyTheme(t);
+  } catch(e){}
+}
+
+// ── Main ENDO object ─────────────────────────────────────────────────────────
+const ENDO = {
+  _state: {
+    session_id: null,
+    phase: 1,
+    retrieved: [],
+    dsl: "",
+    prototype_id: null,
+    autocompile: false
+  },
+  _debounce: null,
+  _validateDebounce: null,
+  _errorLines: new Set(),
+  _dividerDragging: false,
+  _themeIndex: 0,
+
+  /* ── Init ─────────────────────────────────────────────────────────────── */
+  init(){
+    _loadTheme();
+    const cur = document.documentElement.getAttribute("data-theme") || "endo";
+    this._themeIndex = Math.max(0, THEMES.indexOf(cur));
+
+    const ed = document.getElementById("dsl-editor");
+    if(ed){
+      ed.addEventListener("input",  () => this.onEdit());
+      ed.addEventListener("scroll", () => this._syncScroll());
+      ed.addEventListener("keyup",  () => this._updateCursor());
+      ed.addEventListener("click",  () => this._updateCursor());
+      ed.addEventListener("keydown",(e) => {
+        if(e.key === "Tab"){
+          e.preventDefault();
+          const s = ed.selectionStart, en = ed.selectionEnd;
+          ed.value = ed.value.slice(0,s) + "  " + ed.value.slice(en);
+          ed.selectionStart = ed.selectionEnd = s + 2;
+          this.onEdit();
+        }
+      });
+      this._highlight();
+    }
+
+    // Global keyboard shortcuts
+    document.addEventListener("keydown", e => {
+      if((e.ctrlKey||e.metaKey) && e.key === "Enter"){ e.preventDefault(); this.compile(); }
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="s"){ e.preventDefault(); this.download(); }
+      if(e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey){
+        const tag = (document.activeElement||{}).tagName||"";
+        if(tag !== "INPUT" && tag !== "TEXTAREA") this.toggleShortcuts();
+      }
+      if(e.key === "Escape") this._closeOverlays();
+    });
+
+    // Draggable divider
+    const divider = document.getElementById("divider");
+    if(divider){
+      divider.addEventListener("mousedown", e => this._startDividerDrag(e));
+    }
+
+    // Auto-compile checkbox
+    const ac = document.getElementById("autocompile-toggle");
+    if(ac){
+      ac.addEventListener("change", () => {
+        this._state.autocompile = ac.checked;
+      });
+    }
+
+    this.go(1);
+  },
+
+  /* ── Phase stepper ────────────────────────────────────────────────────── */
+  go(phase){
+    document.querySelectorAll(".stepper li").forEach(s => {
+      const n = parseInt(s.dataset.step);
+      s.classList.toggle("active", n === phase);
+      s.classList.toggle("done",   n <  phase);
+    });
+    this._state.phase = phase;
+
+    // Show retrieved section if we have results and phase >= 2
+    const rw = document.getElementById("retrieved-wrap");
+    if(rw) rw.hidden = !(phase >= 2 && this._state.retrieved.length);
+  },
+
+  /* ── Sidebar collapse ─────────────────────────────────────────────────── */
+  toggleSidebar(){
+    const sb = document.getElementById("sidebar");
+    if(!sb) return;
+    sb.classList.toggle("collapsed");
+    const btn = document.getElementById("sidebar-toggle");
+    if(btn) btn.title = sb.classList.contains("collapsed") ? "Mostrar painel" : "Recolher painel";
+  },
+
+  /* ── Theme toggle ─────────────────────────────────────────────────────── */
+  toggleTheme(){
+    this._themeIndex = (this._themeIndex + 1) % THEMES.length;
+    _applyTheme(THEMES[this._themeIndex]);
+  },
+
+  /* ── Shortcuts overlay ────────────────────────────────────────────────── */
+  toggleShortcuts(){
+    const el = document.getElementById("shortcuts-overlay");
+    if(!el) return;
+    if(el.hidden || !el.classList.contains("show")){
+      el.hidden = false;
+      requestAnimationFrame(() => el.classList.add("show"));
+    } else {
+      el.classList.remove("show");
+      setTimeout(() => { el.hidden = true; }, 200);
+    }
+  },
+
+  _closeOverlays(){
+    const el = document.getElementById("shortcuts-overlay");
+    if(el){ el.classList.remove("show"); setTimeout(() => { el.hidden = true; }, 200); }
+    const ho = document.getElementById("help-overlay");
+    if(ho) ho.classList.remove("show");
+  },
+
+  /* Keep legacy "help" name working */
+  help(){ this.toggleShortcuts(); },
+
+  /* ── Session ──────────────────────────────────────────────────────────── */
+  async createSession(){
+    const form = document.getElementById("ctx-form");
+    const data = {};
+    if(form) new FormData(form).forEach((v,k) => { data[k] = v; });
+    try{
+      const res = await fetch("/api/session",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      this._state.session_id = json.session_id;
+      this._state.ctx = data;
+      return json.session_id;
+    } catch(e){
+      this._setMsg("Erro ao criar sessão");
+      return null;
+    }
+  },
+
+  /* ── Retrieve ─────────────────────────────────────────────────────────── */
+  async retrieve(){
+    await this.createSession();
+    this._setMsg("buscando componentes…");
+    try{
+      const res = await fetch("/api/retrieve",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({...(this._state.ctx||{}), top_k:6})
+      });
+      const json = await res.json();
+      this._state.retrieved = json.components || [];
+      this._renderRetrieved();
+      const rw = document.getElementById("retrieved-wrap");
+      if(rw) rw.hidden = false;
+      this.go(2);
+      this._setMsg(`${this._state.retrieved.length} componente(s) recuperado(s)`);
+    } catch(e){
+      this._setMsg("Erro ao recuperar componentes");
+    }
+  },
+
+  _renderRetrieved(){
+    const list = document.getElementById("retrieved-list");
+    if(!list) return;
+    if(!this._state.retrieved.length){
+      list.innerHTML = '<p class="muted small">Nenhum componente recuperado.</p>';
+      return;
+    }
+    list.innerHTML = this._state.retrieved.map(rc => {
+      const lvl = _BLOOM_MAP[rc.bloom_level] || 0;
+      return `<div class="comp-card">
+        <div class="sel-row">
+          <input type="checkbox" name="selected_keys" value="${_esc(rc.key)}" checked>
+          <div>
+            <div class="cc-name">${_esc(rc.name||rc.key)}</div>
+            <div class="cc-key">${_esc(rc.key)}</div>
+          </div>
+          <span class="score">${(rc.score||0).toFixed(2)}</span>
+        </div>
+        <div class="cc-badges">
+          <span class="badge bloom-${lvl}">${_esc(rc.bloom_level||"")}</span>
+          <span class="pill">${_esc(rc.mechanic_type||"")}</span>
+        </div>
+      </div>`;
+    }).join("");
+  },
+
+  /* ── Generate ─────────────────────────────────────────────────────────── */
+  skipToGenerate(){
+    this._state.retrieved = [];
+    this.generate(true);
+  },
+
+  async generate(fromScratch){
+    await this.createSession();
+    const checks = document.querySelectorAll("input[name=selected_keys]:checked");
+    const selected_keys = (!fromScratch && checks.length)
+      ? Array.from(checks).map(c=>c.value) : null;
+
+    const btn = document.getElementById("btn-generate");
+    if(btn){ btn.disabled=true; btn.textContent="Gerando…"; }
+    this._setMsg("gerando especificação com IA…");
+
+    try{
+      const res = await fetch("/api/generate",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          session_id: this._state.session_id,
+          selected_keys,
+          from_scratch: !!fromScratch
+        })
+      });
+      const json = await res.json();
+      this._state.dsl = json.dsl || "";
+      this._state.session_id = json.session_id || this._state.session_id;
+
+      const ed = document.getElementById("dsl-editor");
+      if(ed) ed.value = this._state.dsl;
+
+      this._renderMetrics(json.metrics);
+      this.go(4);
+      this._highlight();
+      this._validate();
+      this._setMsg("✓ especificação gerada");
+    } catch(e){
+      this._setMsg("Erro na geração");
+    } finally{
+      if(btn){ btn.disabled=false; btn.textContent="Gerar especificação →"; }
+    }
+  },
+
+  _renderMetrics(m){
+    const box  = document.getElementById("metrics-box");
+    const wrap = document.getElementById("metrics-wrap");
+    if(!box || !m) return;
+    if(wrap) wrap.hidden = false;
+    box.innerHTML =
+      `<div class="stat"><b>${m.attempts||0}</b><span>tentativas</span></div>
+       <div class="stat"><b>${m.success?"✓":"✗"}</b><span>sucesso</span></div>
+       <div class="stat"><b>${Math.round(m.elapsed_ms||0)}</b><span>ms</span></div>`;
+  },
+
+  /* ── Editor helpers ───────────────────────────────────────────────────── */
+  _highlight(){
+    const ed = document.getElementById("dsl-editor");
+    // New DOM
+    const hl  = document.getElementById("highlight-layer") || document.getElementById("highlight");
+    const gut = document.getElementById("line-numbers")    || document.getElementById("gutter");
+    if(!ed || !hl) return;
+
+    const src   = ed.value;
+    const lines = src.split("\n");
+
+    if(gut) gut.textContent = lines.map((_,i) => i+1).join("\n");
+
+    const html = lines.map((line,idx) =>
+      _tokenizeLine(line, this._errorLines.has(idx+1))
+    ).join("\n");
+    hl.innerHTML = html;
+
+    this._syncScroll();
+  },
+
+  _syncScroll(){
+    const ed  = document.getElementById("dsl-editor");
+    const hl  = document.getElementById("highlight-layer") || document.getElementById("highlight");
+    const gut = document.getElementById("line-numbers")    || document.getElementById("gutter");
+    if(!ed) return;
+    if(hl)  { hl.scrollTop = ed.scrollTop; hl.scrollLeft = ed.scrollLeft; }
+    if(gut) gut.style.transform = `translateY(${-ed.scrollTop}px)`;
+  },
+
+  _updateCursor(){
+    const ed = document.getElementById("dsl-editor");
+    const el = document.getElementById("st-cursor");
+    if(!ed || !el) return;
+    const before = ed.value.slice(0, ed.selectionStart);
+    const lines  = before.split("\n");
+    el.textContent = `Ln ${lines.length}, Col ${lines[lines.length-1].length+1}`;
+  },
+
+  onEdit(){
+    this._highlight();
+    this._updateCursor();
+    clearTimeout(this._validateDebounce);
+    this._validateDebounce = setTimeout(() => this._validate(), 300);
+    if(this._state.autocompile){
+      clearTimeout(this._debounce);
+      this._debounce = setTimeout(() => this.compile(), 1200);
+    }
+  },
+
+  _setMsg(t){
+    const el = document.getElementById("st-msg");
+    if(el) el.textContent = t;
+  },
+
+  _dot(id, state){
+    const d = document.getElementById(id);
+    if(d) d.className = "dot" + (state ? " "+state : "");
+  },
+
+  /* ── Validate ─────────────────────────────────────────────────────────── */
+  async _validate(){
+    const ed = document.getElementById("dsl-editor");
+    if(!ed) return;
+    const dsl = ed.value;
+    this._state.dsl = dsl;
+    if(!dsl.trim()){
+      this._dot("st-syn"); this._dot("st-sem");
+      this._setMsg(""); this._hideErrorPanel();
+      this._updateValBadge(null, null, 0);
+      return;
+    }
+    try{
+      const res = await fetch("/api/validate",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({dsl})
+      });
+      const v = await res.json();
+
+      this._errorLines = new Set();
+      (v.errors||[]).forEach(e => { if(e.line) this._errorLines.add(e.line); });
+
+      this._dot("st-syn", v.syntactic_ok ? "ok" : "bad");
+      this._dot("st-sem", v.semantic_ok  ? "ok" : (v.syntactic_ok ? "bad" : ""));
+
+      const warns = v.warnings || [];
+      const errs  = v.errors   || [];
+      this._dot("st-warn", warns.length ? "warn" : (errs.length ? "" : "ok"));
+      const wn = document.getElementById("st-warn-n");
+      if(wn) wn.textContent = warns.length;
+
+      this._setMsg(
+        errs.length  ? `✗ ${errs[0].message  || errs[0]}`  :
+        warns.length ? `⚠ ${warns[0].message || warns[0]}` : "✓ válida"
+      );
+
+      this._updateValBadge(v.syntactic_ok, v.semantic_ok, warns.length);
+      this._highlight();
+    } catch(e){
+      // Network error – silently ignore
+    }
+  },
+
+  _updateValBadge(syn, sem, warnCount){
+    const b = document.getElementById("val-badge");
+    if(!b) return;
+    if(syn === null && sem === null){
+      b.innerHTML = '<span class="dot"></span> —';
+      return;
+    }
+    const synDot = `<span class="dot ${syn?"ok":"bad"}"></span>sintaxe`;
+    const semDot = `<span class="dot ${sem?"ok":(syn?"bad":"")}"></span>semântica`;
+    const wDot   = `<span class="dot ${warnCount?"warn":"ok"}"></span>avisos:${warnCount}`;
+    b.innerHTML  = [synDot, semDot, wDot].join(" &nbsp; ");
+  },
+
+  _hideErrorPanel(){
+    const p = document.getElementById("error-panel");
+    if(p){ p.classList.remove("visible"); p.style.display="none"; }
+  },
+
+  _showErrors(errors){
+    const p = document.getElementById("error-panel");
+    if(!p) return;
+    if(!errors || !errors.length){ this._hideErrorPanel(); return; }
+    p.innerHTML = errors.map(e => {
+      const loc  = e.line ? `L${e.line}` : "";
+      const msg  = _esc(e.message || String(e));
+      return `<div class="err-item"><span class="err-loc">${loc}</span><span>${msg}</span></div>`;
+    }).join("");
+    p.style.display = "block";
+    p.classList.add("visible");
+  },
+
+  /* ── Compile ──────────────────────────────────────────────────────────── */
+  async compile(){
+    const ed  = document.getElementById("dsl-editor");
+    const dsl = ed ? ed.value : this._state.dsl;
+    if(!dsl.trim()){ this._setMsg("nada para compilar"); return; }
+
+    const btn = document.getElementById("btn-compile");
+    if(btn){ btn.disabled=true; btn.textContent="Compilando…"; }
+    this._setMsg("compilando…");
+
+    const pvStatus = document.getElementById("pv-status");
+    if(pvStatus) pvStatus.textContent = "compilando…";
+
+    try{
+      const res = await fetch("/api/compile",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({dsl, session_id: this._state.session_id, origin:"manual"})
+      });
+      const json = await res.json();
+
+      if(!json.ok){
+        const errs = json.errors || [];
+        this._errorLines = new Set();
+        errs.forEach(e => { if(e && e.line) this._errorLines.add(e.line); });
+        this._highlight();
+        this._setMsg("✗ " + ((errs[0]?.message || errs[0]) || "erro de compilação"));
+        if(pvStatus) pvStatus.textContent = "falhou";
+        this._showErrors(errs);
+        return;
+      }
+
+      this._hideErrorPanel();
+      this._state.prototype_id = json.prototype_id;
+      this._loadPreview(json.prototype_id);
+      this.go(5);
+      this._setMsg(`✓ protótipo #${json.prototype_id} compilado`);
+      if(pvStatus) pvStatus.textContent = `protótipo #${json.prototype_id}`;
+
+      // Show compile metrics
+      const cm = document.getElementById("compile-metrics");
+      if(cm){
+        cm.style.display = "flex";
+        cm.innerHTML =
+          `<span><b>ID:</b> #${json.prototype_id}</span>` +
+          (json.backend ? `<span><b>backend:</b> ${_esc(json.backend)}</span>` : "") +
+          (json.elapsed_ms ? `<span><b>tempo:</b> ${Math.round(json.elapsed_ms)}ms</span>` : "");
+      }
+    } catch(e){
+      this._setMsg("Erro de rede ao compilar");
+    } finally{
+      if(btn){ btn.disabled=false; btn.textContent="▶ Compilar"; }
+    }
+  },
+
+  _loadPreview(pid){
+    // New DOM
+    const frame = document.getElementById("preview-iframe") || document.getElementById("pv-frame");
+    const empty = document.getElementById("preview-empty")  || document.getElementById("pv-empty");
+    if(empty){ empty.hidden = true; empty.style.display="none"; }
+    if(frame){
+      // Fetch the prototype HTML and inject via srcdoc
+      fetch("/prototype/" + pid)
+        .then(r => r.text())
+        .then(html => {
+          frame.srcdoc = html;
+          frame.style.display = "block";
+          frame.classList.add("visible");
+          frame.hidden = false;
+        })
+        .catch(() => {
+          // Fallback: use src
+          frame.src = "/prototype/" + pid + "?t=" + Date.now();
+          frame.style.display = "block";
+          frame.classList.add("visible");
+          frame.hidden = false;
+        });
+    }
+  },
+
+  /* ── Open prototype in new tab ────────────────────────────────────────── */
+  openPrototype(){
+    if(this._state.prototype_id)
+      window.open("/prototype/" + this._state.prototype_id, "_blank");
+    else
+      this._setMsg("compile um protótipo primeiro");
+  },
+
+  /* ── Download DSL as .endo file ───────────────────────────────────────── */
+  download(){
+    const ed  = document.getElementById("dsl-editor");
+    const dsl = ed ? ed.value : this._state.dsl;
+    if(!dsl.trim()){ this._setMsg("editor vazio"); return; }
+    const blob = new Blob([dsl], {type:"text/plain"});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = "spec.endo";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    this._setMsg("✓ spec.endo baixado");
+  },
+
+  /* ── Reparametrize ────────────────────────────────────────────────────── */
+  async reparametrize(){
+    if(!this._state.prototype_id){ this._setMsg("compile antes de reparametrizar"); return; }
+    const sel = document.getElementById("reparam-domain");
+    const domain = sel ? sel.value : "";
+    if(!domain){ this._setMsg("escolha um domínio"); return; }
+    this._setMsg("reparametrizando…");
+    try{
+      const res = await fetch("/api/reparametrize",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({prototype_id: this._state.prototype_id, domain})
+      });
+      const json = await res.json();
+      if(json.prototype_id){
+        this._state.prototype_id = json.prototype_id;
+        this._loadPreview(json.prototype_id);
+      }
+      this._setMsg("↻ reparametrizado para " + domain);
+    } catch(e){
+      this._setMsg("Erro ao reparametrizar");
+    }
+  },
+
+  /* ── Evaluate ─────────────────────────────────────────────────────────── */
+  evaluate(pid){
+    const id = pid || this._state.prototype_id;
+    if(id) window.location.href = "/evaluate/" + id;
+    else   this._setMsg("compile um protótipo antes de avaliar");
+  },
+
+  gotoEvaluate(){ this.evaluate(); },
+
+  /* ── Draggable divider ────────────────────────────────────────────────── */
+  _startDividerDrag(e){
+    e.preventDefault();
+    const divider  = document.getElementById("divider");
+    const edPane   = divider?.previousElementSibling;
+    const pvPane   = divider?.nextElementSibling;
+    if(!edPane || !pvPane) return;
+
+    divider.classList.add("dragging");
+    const container = divider.parentElement;
+    const startX    = e.clientX;
+    const startEdW  = edPane.getBoundingClientRect().width;
+    const startPvW  = pvPane.getBoundingClientRect().width;
+
+    const onMove = mv => {
+      const dx     = mv.clientX - startX;
+      const total  = startEdW + startPvW;
+      const newEdW = Math.max(200, Math.min(total - 200, startEdW + dx));
+      const newPvW = total - newEdW;
+      edPane.style.flex = "none";
+      pvPane.style.flex = "none";
+      edPane.style.width = newEdW + "px";
+      pvPane.style.width = newPvW + "px";
+    };
+    const onUp = () => {
+      divider.classList.remove("dragging");
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup",   onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup",   onUp);
+  }
+};
+
+// ── ENDOUI alias (legacy compat from layout header buttons) ─────────────────
+const ENDOUI = {
+  toggleTheme(){ ENDO.toggleTheme(); },
+  help(){ ENDO.toggleShortcuts(); }
+};
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  if(document.getElementById("dsl-editor")) ENDO.init();
+});

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" font-family="'Segoe UI',Helvetica,Arial,sans-serif">
+  <rect width="1280" height="800" fill="#f1f5f9"/>
+  <rect width="1280" height="56" fill="#1e293b"/>
+  <text x="28" y="35" fill="#fff" font-size="20" font-weight="700">Endo<tspan fill="#4f46e5">-DSL</tspan></text>
+  <g font-size="14" fill="#cbd5e1"><text x="420" y="35">Início</text><text x="510" y="35">Estúdio</text><text x="600" y="35">Biblioteca</text><text x="710" y="35">Curadoria</text><text x="815" y="35" fill="#fff" font-weight="600">Relatórios</text></g>
+  <text x="64" y="108" fill="#64748b" font-size="13">← Protótipo</text>
+  <text x="64" y="140" fill="#0f172a" font-size="28" font-weight="800">Avaliar protótipo #17 <tspan fill="#94a3b8" font-size="14" font-weight="400">RF24 · RF25</tspan></text>
+  <text x="64" y="166" fill="#475569" font-size="14">Comparando Frações · origem: auto · instrumento endo-eval-1.0 · escala Likert 1–5</text>
+  <rect x="64" y="190" width="1152" height="1" fill="#e2e8f0"/>
+  <!-- 7 dimensions -->
+  <g font-size="14">
+    <!-- helper: stars -->
+    <!-- dim 1 -->
+    <text x="64" y="232" fill="#0f172a" font-weight="600">Alinhamento pedagógico</text>
+    <text x="64" y="252" fill="#94a3b8" font-size="12">As mecânicas implementam de fato os objetivos declarados?</text>
+    <g fill="#eab308" font-size="28"><text x="760" y="248">★</text><text x="800" y="248">★</text><text x="840" y="248">★</text><text x="880" y="248">★</text><text x="920" y="248" fill="#cbd5e1">★</text></g><text x="970" y="245" fill="#475569">4 / 5</text>
+    <!-- dim 2 -->
+    <text x="64" y="296" fill="#0f172a" font-weight="600">Coerência cognitiva (Bloom)</text>
+    <text x="64" y="316" fill="#94a3b8" font-size="12">O nível cognitivo exercitado corresponde ao Bloom pretendido?</text>
+    <g fill="#eab308" font-size="28"><text x="760" y="312">★</text><text x="800" y="312">★</text><text x="840" y="312">★</text><text x="880" y="312">★</text><text x="920" y="312">★</text></g><text x="970" y="309" fill="#475569">5 / 5</text>
+    <!-- dim 3 -->
+    <text x="64" y="360" fill="#0f172a" font-weight="600">Endogeneidade</text>
+    <text x="64" y="380" fill="#94a3b8" font-size="12">O conteúdo está integrado à mecânica (aprender é jogar)?</text>
+    <g fill="#eab308" font-size="28"><text x="760" y="376">★</text><text x="800" y="376">★</text><text x="840" y="376">★</text><text x="880" y="376" fill="#cbd5e1">★</text><text x="920" y="376" fill="#cbd5e1">★</text></g><text x="970" y="373" fill="#475569">3 / 5</text>
+    <!-- dim 4 -->
+    <text x="64" y="424" fill="#0f172a" font-weight="600">Clareza instrucional</text>
+    <text x="64" y="444" fill="#94a3b8" font-size="12">As instruções e os desafios são claros?</text>
+    <g fill="#eab308" font-size="28"><text x="760" y="440">★</text><text x="800" y="440">★</text><text x="840" y="440">★</text><text x="880" y="440">★</text><text x="920" y="440" fill="#cbd5e1">★</text></g><text x="970" y="437" fill="#475569">4 / 5</text>
+    <!-- dim 5 -->
+    <text x="64" y="488" fill="#0f172a" font-weight="600">Adequação ao público</text>
+    <text x="64" y="508" fill="#94a3b8" font-size="12">Adequado à faixa etária e ao contexto do aprendiz?</text>
+    <g fill="#eab308" font-size="28"><text x="760" y="504">★</text><text x="800" y="504">★</text><text x="840" y="504">★</text><text x="880" y="504">★</text><text x="920" y="504" fill="#cbd5e1">★</text></g><text x="970" y="501" fill="#475569">4 / 5</text>
+    <!-- dim 6 -->
+    <text x="64" y="552" fill="#0f172a" font-weight="600">Potencial de engajamento</text>
+    <text x="64" y="572" fill="#94a3b8" font-size="12">Tem potencial para manter o interesse do aprendiz?</text>
+    <g fill="#eab308" font-size="28"><text x="760" y="568">★</text><text x="800" y="568">★</text><text x="840" y="568">★</text><text x="880" y="568" fill="#cbd5e1">★</text><text x="920" y="568" fill="#cbd5e1">★</text></g><text x="970" y="565" fill="#475569">3 / 5</text>
+    <!-- dim 7 -->
+    <text x="64" y="616" fill="#0f172a" font-weight="600">Adaptabilidade de conteúdo</text>
+    <text x="64" y="636" fill="#94a3b8" font-size="12">Reparametrizável para outros domínios sem perder coerência?</text>
+    <g fill="#eab308" font-size="28"><text x="760" y="632">★</text><text x="800" y="632">★</text><text x="840" y="632">★</text><text x="880" y="632">★</text><text x="920" y="632">★</text></g><text x="970" y="629" fill="#475569">5 / 5</text>
+  </g>
+  <rect x="64" y="660" width="1152" height="1" fill="#e2e8f0"/>
+  <text x="64" y="692" fill="#475569" font-size="13">Avaliador</text>
+  <rect x="64" y="700" width="400" height="36" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="80" y="723" fill="#94a3b8" font-size="13">seu nome</text>
+  <rect x="940" y="700" width="276" height="44" rx="8" fill="#4f46e5"/><text x="1078" y="728" text-anchor="middle" fill="#fff" font-size="15" font-weight="600">Registrar avaliação</text>
+  <text x="490" y="724" fill="#22c55e" font-size="13">Média ponderada parcial: 4.08</text>
+</svg>

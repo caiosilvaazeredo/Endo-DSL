@@ -1,0 +1,572 @@
+"""Servidor web da Endo-DSL (apenas biblioteca padrão).
+
+Expõe a jornada do usuário como aplicação web: estúdio de design (Fases 1–6),
+biblioteca de componentes, fila de curadoria e relatórios. Usa ``http.server``
+em modo single-thread (uma conexão SQLite, sequencial e segura para uso local).
+
+Não há dependências externas — coerente com a filosofia do projeto.
+"""
+
+from __future__ import annotations
+
+import json
+import mimetypes
+import re
+import traceback
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urlparse
+
+from endo_dsl.compiler.compiler import CompileError
+from endo_dsl.library.models import SearchFilters
+from endo_dsl.platform import Platform
+from endo_dsl.web import views
+
+_STATIC = Path(__file__).parent / "static"
+
+# Tipo de um handler: recebe (platform, match, query, body) -> Response
+Response = Tuple[int, str, bytes]
+
+
+def _html(body: str, status: int = 200) -> Response:
+    return status, "text/html; charset=utf-8", body.encode("utf-8")
+
+
+def _json(data: Any, status: int = 200) -> Response:
+    return status, "application/json; charset=utf-8", json.dumps(
+        data, ensure_ascii=False).encode("utf-8")
+
+
+class Router:
+    def __init__(self) -> None:
+        self.routes: List[Tuple[str, re.Pattern, Callable]] = []
+
+    def add(self, method: str, pattern: str, handler: Callable) -> None:
+        regex = re.compile("^" + re.sub(r"<(\w+)>", r"(?P<\1>[^/]+)", pattern) + "$")
+        self.routes.append((method, regex, handler))
+
+    def match(self, method: str, path: str):
+        for m, regex, handler in self.routes:
+            if m != method:
+                continue
+            mo = regex.match(path)
+            if mo:
+                return handler, mo.groupdict()
+        return None, None
+
+
+router = Router()
+
+
+def route(method: str, pattern: str):
+    def deco(fn: Callable) -> Callable:
+        router.add(method, pattern, fn)
+        return fn
+    return deco
+
+
+# --------------------------------------------------------------------------- #
+# Páginas (HTML)
+# --------------------------------------------------------------------------- #
+@route("GET", "/")
+def home(p: Platform, m, q, body) -> Response:
+    stats = {
+        "components": len(p.search_components()),
+        "canonical": len(p.search_components(SearchFilters(status="canonical"))),
+        "prototypes": len(p.list_prototypes()),
+        "backend": p.backend.name,
+    }
+    return _html(views.home_page(stats, prototypes=p.list_prototypes()))
+
+
+@route("GET", "/studio")
+def studio(p: Platform, m, q, body) -> Response:
+    return _html(views.studio_page())
+
+
+@route("GET", "/library")
+def library(p: Platform, m, q, body) -> Response:
+    filters = SearchFilters(
+        text=_first(q, "text"), bloom_level=_first(q, "bloom"),
+        mechanic_type=_first(q, "type"), domain=_first(q, "domain"),
+        status=_first(q, "status"),
+    )
+    comps = p.search_components(filters)
+    return _html(views.library_page(comps, q))
+
+
+@route("GET", "/component/<key>")
+def component_detail(p: Platform, m, q, body) -> Response:
+    comp = p.get_component(m["key"])
+    if not comp:
+        return _html(views.not_found("Componente não encontrado"), 404)
+    versions = p.repo.versions(comp.id)
+    history = p.repo.curation_history(comp.id)
+    return _html(views.component_page(comp, versions, history))
+
+
+@route("GET", "/curator")
+def curator(p: Platform, m, q, body) -> Response:
+    return _html(views.curator_page(p.curation_queue()))
+
+
+@route("GET", "/report")
+def report(p: Platform, m, q, body) -> Response:
+    return _html(views.report_page(p.comparison_report()))
+
+
+@route("GET", "/docs")
+def docs(p: Platform, m, q, body) -> Response:
+    from endo_dsl.dsl import limits
+    grammar = (Path(__file__).parent.parent / "dsl" / "grammar.ebnf").read_text(encoding="utf-8")
+    return _html(views.docs_page(grammar, limits.as_dict()))
+
+
+@route("GET", "/evaluate/<pid>")
+def evaluate_page(p: Platform, m, q, body) -> Response:
+    proto = p.get_prototype(int(m["pid"]))
+    if not proto:
+        return _html(views.not_found("Protótipo não encontrado"), 404)
+    return _html(views.evaluate_page(proto))
+
+
+@route("GET", "/prototype/<pid>")
+def serve_prototype(p: Platform, m, q, body) -> Response:
+    html = p.prototype_html(int(m["pid"]))
+    if html is None:
+        return _html(views.not_found("Protótipo não encontrado"), 404)
+    return _html(html)
+
+
+@route("GET", "/prototype/<pid>/traceability")
+def serve_traceability(p: Platform, m, q, body) -> Response:
+    proto = p.get_prototype(int(m["pid"]))
+    if not proto:
+        return _html(views.not_found("Protótipo não encontrado"), 404)
+    from endo_dsl.dsl.parser import parse
+    spec_row = p.db.query_one("SELECT dsl_source FROM specifications WHERE id = ?",
+                              (proto["spec_id"],))
+    if spec_row:
+        from endo_dsl.compiler import traceability as trace
+        return _html(trace.as_html(parse(spec_row["dsl_source"])))
+    return _json(proto["traceability"])
+
+
+# --------------------------------------------------------------------------- #
+# API (JSON)
+# --------------------------------------------------------------------------- #
+@route("POST", "/api/session")
+def api_session(p: Platform, m, q, body) -> Response:
+    sid = p.create_session(body.get("name", "Sessão sem nome"), body)
+    return _json({"session_id": sid})
+
+
+@route("POST", "/api/retrieve")
+def api_retrieve(p: Platform, m, q, body) -> Response:
+    from endo_dsl.agents.context import DesignContext
+    ctx = DesignContext.from_dict(body)
+    retrieved = p.retrieve(ctx, top_k=int(body.get("top_k", 6)))
+    return _json({"components": [rc.to_dict() for rc in retrieved]})
+
+
+@route("POST", "/api/generate")
+def api_generate(p: Platform, m, q, body) -> Response:
+    sid = body.get("session_id")
+    if sid is None:
+        sid = p.create_session(body.get("name", "Sessão"), body)
+    keys = body.get("selected_keys")
+    res = p.generate(int(sid), selected_keys=keys,
+                     from_scratch=bool(body.get("from_scratch")))
+    out = res.to_dict()
+    out["session_id"] = sid
+    out["metrics"] = p.generation_metrics(int(sid))
+    return _json(out)
+
+
+@route("POST", "/api/validate")
+def api_validate(p: Platform, m, q, body) -> Response:
+    return _json(p.validate(body.get("dsl", "")))
+
+
+@route("POST", "/api/compile")
+def api_compile(p: Platform, m, q, body) -> Response:
+    try:
+        result = p.compile(body.get("dsl", ""), session_id=body.get("session_id"),
+                           origin=body.get("origin", "auto"))
+    except CompileError as exc:
+        return _json({"ok": False, "errors": exc.messages}, 400)
+    result.pop("html", None)  # não precisa devolver o HTML inteiro ao cliente
+    result["ok"] = True
+    return _json(result)
+
+
+@route("POST", "/api/reparametrize")
+def api_reparametrize(p: Platform, m, q, body) -> Response:
+    res = p.reparametrize(int(body["prototype_id"]), domain=body.get("domain"),
+                          topic=body.get("topic"))
+    res.pop("html", None)
+    return _json(res)
+
+
+@route("POST", "/api/curate")
+def api_curate(p: Platform, m, q, body) -> Response:
+    action = body.get("action")
+    cid = int(body["component_id"])
+    if action == "approve":
+        p.approve_component(cid, curator=body.get("curator"), justification=body.get("note", ""))
+    elif action == "reject":
+        p.reject_component(cid, curator=body.get("curator"), justification=body.get("note", ""))
+    elif action == "request_changes":
+        p.request_component_changes(cid, curator=body.get("curator"),
+                                    justification=body.get("note", ""))
+    else:
+        return _json({"ok": False, "error": "ação inválida"}, 400)
+    return _json({"ok": True})
+
+
+@route("POST", "/api/contribute")
+def api_contribute(p: Platform, m, q, body) -> Response:
+    try:
+        cid = p.contribute_component(
+            name=body["name"], dsl_signature=body["dsl_signature"],
+            bloom_level=body["bloom_level"], mechanic_type=body["mechanic_type"],
+            description=body["description"], params=body.get("params", {}),
+            domain=body.get("domain"), context=body.get("context"),
+            age_range=body.get("age_range"), modality=body.get("modality"),
+            author=body.get("author"))
+    except (KeyError, ValueError) as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+    return _json({"ok": True, "component_id": cid})
+
+
+@route("POST", "/api/evaluate")
+def api_evaluate(p: Platform, m, q, body) -> Response:
+    try:
+        eid = p.evaluate(
+            scores={k: float(v) for k, v in body.get("scores", {}).items()},
+            origin=body.get("origin", "auto"),
+            prototype_id=body.get("prototype_id"),
+            evaluator=body.get("evaluator"),
+            bloom_level=body.get("bloom_level"),
+            domain=body.get("domain"),
+            components_used=body.get("components_used"),
+            comments=body.get("comments", ""))
+    except ValueError as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+    return _json({"ok": True, "evaluation_id": eid})
+
+
+@route("GET", "/api/report")
+def api_report(p: Platform, m, q, body) -> Response:
+    if _first(q, "format") == "csv":
+        return (200, "text/csv; charset=utf-8", p.evaluations.export_csv().encode("utf-8"))
+    return _json(p.comparison_report())
+
+
+# --------------------------------------------------------------------------- #
+# Board Game / GDC routes
+# --------------------------------------------------------------------------- #
+@route("GET", "/gdc")
+def gdc(p: Platform, m, q, body) -> Response:
+    return _html(views.gdc_page())
+
+
+@route("GET", "/api/boardgame/mechanics")
+def api_boardgame_mechanics(p: Platform, m, q, body) -> Response:
+    try:
+        from endo_dsl.boardgame.mechanics import MECHANICS_CATALOG
+        import dataclasses
+        serializable = {k: dataclasses.asdict(v) if dataclasses.is_dataclass(v) else v
+                        for k, v in MECHANICS_CATALOG.items()}
+        return _json(serializable)
+    except ImportError:
+        return _json({})
+
+
+@route("POST", "/api/boardgame/gdc-to-dsl")
+def api_gdc_to_dsl(p: Platform, m, q, body) -> Response:
+    try:
+        from endo_dsl.boardgame.templates import generate_template
+        gdc_data = body.get("gdc", {})
+        game_type = gdc_data.get("game_type", "trilha")
+        ctx = {
+            "title": gdc_data.get("title", "Meu Jogo"),
+            "domain": gdc_data.get("domain", "Geral"),
+            "topic": gdc_data.get("topic", ""),
+            "bloom_target": (gdc_data.get("bloom_levels") or ["Aplicar"])[0],
+            "age_range": gdc_data.get("age_range", "10-12"),
+            "players": str(gdc_data.get("player_count", "2-4")),
+            "duration": gdc_data.get("duration", 30),
+            "objective_text": " ".join(gdc_data.get("learning_objectives", [])),
+        }
+        dsl = generate_template(game_type, ctx)
+        return _json({"ok": True, "dsl": dsl, "template_used": game_type})
+    except Exception as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+
+
+@route("POST", "/api/boardgame/generate")
+def api_boardgame_generate(p: Platform, m, q, body) -> Response:
+    try:
+        from endo_dsl.boardgame.templates import generate_template
+        from endo_dsl.boardgame.compiler import compile_boardgame_source
+        gdc_data = body.get("gdc", {})
+        game_type = gdc_data.get("game_type", "trilha")
+        ctx = {
+            "title": body.get("title", gdc_data.get("title", "Meu Jogo")),
+            "domain": body.get("domain", gdc_data.get("domain", "Geral")),
+            "topic": gdc_data.get("topic", ""),
+            "bloom_target": (gdc_data.get("bloom_levels") or ["Aplicar"])[0],
+            "age_range": gdc_data.get("age_range", "10-12"),
+            "players": str(body.get("players", gdc_data.get("player_count", "2-4"))),
+            "duration": gdc_data.get("duration", 30),
+            "objective_text": " ".join(gdc_data.get("learning_objectives", [])),
+        }
+        dsl = body.get("dsl") or generate_template(game_type, ctx)
+        result = compile_boardgame_source(dsl, domain=ctx["domain"], topic=ctx["topic"])
+
+        # Persist to DB
+        import json as _json_mod
+        import datetime
+        html = result["html"]
+        trace_json = _json_mod.dumps(result["traceability"])
+        bloom_json = _json_mod.dumps([ctx["bloom_target"]])
+        now = datetime.datetime.utcnow().isoformat()
+        # Save HTML to a temp path and store path reference
+        import tempfile, os
+        tmpdir = Path(tempfile.gettempdir()) / "endo_boardgames"
+        tmpdir.mkdir(exist_ok=True)
+        # Insert spec first to get a spec_id
+        spec_cur = p.db.execute(
+            "INSERT INTO specifications (session_id, title, dsl_source, origin, parsed_ok, created_at)"
+            " VALUES (?,?,?,?,?,?)",
+            (None, ctx["title"], dsl, "manual", 1, now)
+        )
+        spec_id = spec_cur.lastrowid
+        html_path = str(tmpdir / f"boardgame_{spec_id}.html")
+        Path(html_path).write_text(html, encoding="utf-8")
+        bid_cur = p.db.execute(
+            "INSERT INTO prototypes (spec_id, title, html_path, traceability_json, bloom_levels_json, origin, compiled_ok, created_at)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (spec_id, ctx["title"], html_path, trace_json, bloom_json, "manual", 1, now)
+        )
+        bid = bid_cur.lastrowid
+        return _json({"ok": True, "prototype_id": bid,
+                      "html_url": f"/boardgame/{bid}",
+                      "metadata": result["metadata"]})
+    except Exception as exc:
+        import traceback as _tb
+        return _json({"ok": False, "error": str(exc), "trace": _tb.format_exc()}, 400)
+
+
+@route("GET", "/boardgame/<bid>")
+def serve_boardgame(p: Platform, m, q, body) -> Response:
+    try:
+        row = p.db.query_one("SELECT html_path FROM prototypes WHERE id = ?", (int(m["bid"]),))
+        if not row or not row["html_path"]:
+            return _html(views.not_found("Jogo de tabuleiro não encontrado"), 404)
+        html_file = Path(row["html_path"])
+        if not html_file.exists():
+            return _html(views.not_found("Arquivo do jogo não encontrado"), 404)
+        return _html(html_file.read_text(encoding="utf-8"))
+    except Exception:
+        return _html(views.not_found("Jogo não encontrado"), 404)
+
+
+@route("GET", "/boardgame/<bid>/download")
+def download_boardgame(p: Platform, m, q, body) -> Response:
+    """Exporta o jogo como arquivo HTML único, auto-contido e jogável offline."""
+    import re as _re
+    row = p.db.query_one("SELECT title, html_path FROM prototypes WHERE id = ?",
+                         (int(m["bid"]),))
+    if not row or not row["html_path"] or not Path(row["html_path"]).exists():
+        return _html(views.not_found("Jogo não encontrado"), 404)
+    html_bytes = Path(row["html_path"]).read_bytes()
+    slug = _re.sub(r"[^A-Za-z0-9_-]+", "-", str(row["title"] or "jogo")).strip("-") or "jogo"
+    return (200,
+            "text/html; charset=utf-8",
+            html_bytes,
+            {"Content-Disposition": f'attachment; filename="{slug}-endo-dsl.html"'})
+
+
+@route("POST", "/api/boardgame/compile-dsl")
+def api_boardgame_compile_dsl(p: Platform, m, q, body) -> Response:
+    try:
+        from endo_dsl.boardgame.compiler import compile_boardgame_source
+        dsl = body.get("dsl", "")
+        domain = body.get("domain", "generico")
+        result = compile_boardgame_source(dsl, domain=domain)
+        html = result["html"]
+        import json as _json_mod, datetime, tempfile
+        now = datetime.datetime.utcnow().isoformat()
+        tmpdir = Path(tempfile.gettempdir()) / "endo_boardgames"
+        tmpdir.mkdir(exist_ok=True)
+        bloom_v = result["metadata"].get("bloom", "")
+        sc = p.db.execute(
+            "INSERT INTO specifications (session_id, title, dsl_source, origin, parsed_ok, created_at)"
+            " VALUES (?,?,?,?,?,?)",
+            (None, result["metadata"]["title"], dsl, "manual", 1, now)
+        )
+        spec_id = sc.lastrowid
+        html_path = str(tmpdir / f"boardgame_{spec_id}.html")
+        Path(html_path).write_text(html, encoding="utf-8")
+        bc = p.db.execute(
+            "INSERT INTO prototypes (spec_id, title, html_path, traceability_json, bloom_levels_json, origin, compiled_ok, created_at)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (spec_id, result["metadata"]["title"], html_path,
+             _json_mod.dumps(result["traceability"]),
+             _json_mod.dumps([bloom_v]), "manual", 1, now)
+        )
+        bid = bc.lastrowid
+        return _json({"ok": True, "html_size": len(html),
+                      "prototype_id": bid, "html_url": f"/boardgame/{bid}"})
+    except Exception as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+
+
+# --------------------------------------------------------------------------- #
+def _first(q: Dict[str, List[str]], key: str) -> Optional[str]:
+    vals = q.get(key)
+    return vals[0] if vals else None
+
+
+class Handler(BaseHTTPRequestHandler):
+    platform: Optional[Platform] = None
+    server_version = "EndoDSL/1.0"
+
+    def log_message(self, fmt, *args):  # silencia logs ruidosos
+        pass
+
+    def _send(self, resp: Response) -> None:
+        status, ctype, body = resp[0], resp[1], resp[2]
+        extra_headers = resp[3] if len(resp) > 3 else {}
+        self.send_response(status)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        for k, v in extra_headers.items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _static(self, path: str) -> bool:
+        rel = path[len("/static/"):]
+        fpath = (_STATIC / rel).resolve()
+        if not str(fpath).startswith(str(_STATIC.resolve())) or not fpath.is_file():
+            return False
+        ctype = mimetypes.guess_type(str(fpath))[0] or "application/octet-stream"
+        self._send((200, ctype, fpath.read_bytes()))
+        return True
+
+    def _handle(self, method: str) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if method == "GET" and path.startswith("/static/"):
+            if not self._static(path):
+                self._send(_html(views.not_found("Arquivo não encontrado"), 404))
+            return
+        body: Dict[str, Any] = {}
+        if method == "POST":
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            raw = self.rfile.read(length) if length else b""
+            if raw:
+                try:
+                    body = json.loads(raw.decode("utf-8"))
+                except ValueError:
+                    body = {k: v[0] for k, v in parse_qs(raw.decode("utf-8")).items()}
+        handler, params = router.match(method, path)
+        if handler is None:
+            self._send(_html(views.not_found(f"Rota não encontrada: {path}"), 404))
+            return
+        try:
+            query = parse_qs(parsed.query)
+            self._send(handler(self.platform, params, query, body))
+        except Exception as exc:  # erro inesperado -> 500 com traço (uso local)
+            tb = traceback.format_exc()
+            if path.startswith("/api/"):
+                self._send(_json({"ok": False, "error": str(exc), "trace": tb}, 500))
+            else:
+                self._send(_html(views.error_page(str(exc), tb), 500))
+
+    def do_GET(self) -> None:
+        self._handle("GET")
+
+    def do_POST(self) -> None:
+        self._handle("POST")
+
+
+def make_server(host: str = "127.0.0.1", port: int = 8000,
+                db_path: Optional[str] = None) -> HTTPServer:
+    Handler.platform = Platform(db_path)
+    return HTTPServer((host, port), Handler)
+
+
+def serve(host: str = "127.0.0.1", port: int = 8000,
+          db_path: Optional[str] = None) -> None:
+    httpd = make_server(host, port, db_path)
+    print(f"Endo-DSL — interface web em http://{host}:{port}")
+    print(f"  backend LLM: {Handler.platform.backend.name}  ·  "
+          f"banco: {Handler.platform.db.path}")
+    print("  Ctrl+C para encerrar.")
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nEncerrando…")
+        httpd.server_close()
+
+
+# --------------------------------------------------------------------------- #
+# Construtor de Blocos MDA (mecânicas/dinâmicas/estéticas + fluxo BPMN)
+# --------------------------------------------------------------------------- #
+@route("GET", "/builder")
+def builder(p: Platform, m, q, body) -> Response:
+    return _html(views.builder_page())
+
+
+@route("GET", "/api/builder/catalogs")
+def api_builder_catalogs(p: Platform, m, q, body) -> Response:
+    from endo_dsl.boardgame.catalogs import get_catalogs
+    return _json(get_catalogs())
+
+
+@route("POST", "/api/builder/dsl")
+def api_builder_dsl(p: Platform, m, q, body) -> Response:
+    from endo_dsl.boardgame.block_builder import blocks_to_dsl
+    try:
+        return _json({"ok": True, "dsl": blocks_to_dsl(body.get("config", body))})
+    except Exception as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+
+
+@route("POST", "/api/builder/generate")
+def api_builder_generate(p: Platform, m, q, body) -> Response:
+    from endo_dsl.boardgame.block_builder import compile_blocks
+    from endo_dsl.db.database import now_iso, to_json
+    config = body.get("config", body)
+    try:
+        result = compile_blocks(config)
+    except Exception as exc:
+        return _json({"ok": False, "error": str(exc)}, 400)
+    title = str(config.get("title") or "Jogo de Blocos")
+    spec_id = p.db.insert(
+        """INSERT INTO specifications (session_id, title, dsl_source, origin, parsed_ok, created_at)
+           VALUES (NULL,?,?,?,1,?)""",
+        (title, result["dsl"], "auto", now_iso()),
+    )
+    out_dir = p.workspace / f"boardgame_{spec_id}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    html_path = out_dir / "boardgame.html"
+    html_path.write_text(result["html"], encoding="utf-8")
+    trace = result.get("traceability") or {}
+    proto_id = p.db.insert(
+        """INSERT INTO prototypes
+           (spec_id, session_id, title, html_path, traceability_json, bloom_levels_json,
+            origin, compiled_ok, created_at)
+           VALUES (?,NULL,?,?,?,?,?,1,?)""",
+        (spec_id, title, str(html_path), to_json(trace),
+         to_json(trace.get("bloom_levels_covered", [])), "auto", now_iso()),
+    )
+    return _json({"ok": True, "spec_id": spec_id, "prototype_id": proto_id,
+                  "dsl": result["dsl"],
+                  "html_url": f"/boardgame/{proto_id}",
+                  "traceability": trace})

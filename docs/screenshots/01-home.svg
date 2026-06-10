@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" font-family="'Segoe UI',Helvetica,Arial,sans-serif">
+  <rect width="1280" height="800" fill="#f1f5f9"/>
+  <!-- Header -->
+  <rect width="1280" height="56" fill="#1e293b"/>
+  <text x="28" y="35" fill="#ffffff" font-size="20" font-weight="700">Endo<tspan fill="#4f46e5">-DSL</tspan></text>
+  <g font-size="14" fill="#cbd5e1">
+    <text x="420" y="35" fill="#ffffff" font-weight="600">Início</text>
+    <text x="510" y="35">Estúdio</text>
+    <text x="600" y="35">Biblioteca</text>
+    <text x="710" y="35">Curadoria</text>
+    <text x="815" y="35">Relatórios</text>
+    <text x="920" y="35">Gramática</text>
+  </g>
+  <rect x="1150" y="14" width="100" height="28" rx="14" fill="#4f46e5"/>
+  <text x="1200" y="33" fill="#fff" font-size="13" text-anchor="middle">Entrar</text>
+  <!-- Hero -->
+  <text x="64" y="150" fill="#0f172a" font-size="40" font-weight="800">Design e geração de jogos educativos endógenos</text>
+  <text x="64" y="192" fill="#475569" font-size="18">DSL formal · Taxonomia de Bloom como construto de primeira classe · compilação para HTML5 puro</text>
+  <rect x="64" y="222" width="260" height="48" rx="8" fill="#4f46e5"/>
+  <text x="194" y="252" fill="#fff" font-size="16" font-weight="600" text-anchor="middle">▶ Abrir o Estúdio</text>
+  <rect x="340" y="222" width="240" height="48" rx="8" fill="#fff" stroke="#cbd5e1"/>
+  <text x="460" y="252" fill="#1e293b" font-size="16" text-anchor="middle">Explorar Biblioteca</text>
+  <!-- Stats -->
+  <g>
+    <rect x="64" y="312" width="270" height="96" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <text x="84" y="362" fill="#4f46e5" font-size="36" font-weight="800">42</text>
+    <text x="84" y="388" fill="#64748b" font-size="14">componentes</text>
+    <rect x="354" y="312" width="270" height="96" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <text x="374" y="362" fill="#22c55e" font-size="36" font-weight="800">28</text>
+    <text x="374" y="388" fill="#64748b" font-size="14">canônicos ★</text>
+    <rect x="644" y="312" width="270" height="96" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <text x="664" y="362" fill="#f97316" font-size="36" font-weight="800">17</text>
+    <text x="664" y="388" fill="#64748b" font-size="14">protótipos</text>
+    <rect x="934" y="312" width="282" height="96" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <text x="954" y="362" fill="#1e293b" font-size="22" font-weight="800">heurístico</text>
+    <text x="954" y="388" fill="#64748b" font-size="14">backend LLM</text>
+  </g>
+  <!-- Cards -->
+  <g>
+    <rect x="64" y="440" width="276" height="180" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="64" y="440" width="276" height="6" rx="3" fill="#3b82f6"/>
+    <text x="84" y="482" fill="#0f172a" font-size="17" font-weight="700">1 · Motor da DSL</text>
+    <text x="84" y="512" fill="#475569" font-size="13">Gramática formal EBNF, parser com</text>
+    <text x="84" y="532" fill="#475569" font-size="13">erros descritivos (RF03) e validação</text>
+    <text x="84" y="552" fill="#475569" font-size="13">de coerência cognitiva (RF04).</text>
+    <rect x="356" y="440" width="276" height="180" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="356" y="440" width="276" height="6" rx="3" fill="#14b8a6"/>
+    <text x="376" y="482" fill="#0f172a" font-size="17" font-weight="700">2 · Biblioteca</text>
+    <text x="376" y="512" fill="#475569" font-size="13">Componentes versionados, métricas,</text>
+    <text x="376" y="532" fill="#475569" font-size="13">busca multifacetada (RF09) e</text>
+    <text x="376" y="552" fill="#475569" font-size="13">curadoria canônico/experimental.</text>
+    <rect x="648" y="440" width="276" height="180" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="648" y="440" width="276" height="6" rx="3" fill="#eab308"/>
+    <text x="668" y="482" fill="#0f172a" font-size="17" font-weight="700">3 · Pipeline multi-agente</text>
+    <text x="668" y="512" fill="#475569" font-size="13">Recuperação, geração e validação</text>
+    <text x="668" y="532" fill="#475569" font-size="13">encadeadas, com refinamento</text>
+    <text x="668" y="552" fill="#475569" font-size="13">iterativo (RF14–RF18).</text>
+    <rect x="940" y="440" width="276" height="180" rx="12" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="940" y="440" width="276" height="6" rx="3" fill="#ef4444"/>
+    <text x="960" y="482" fill="#0f172a" font-size="17" font-weight="700">4 · Compilador</text>
+    <text x="960" y="512" fill="#475569" font-size="13">DSL → protótipo HTML5 jogável,</text>
+    <text x="960" y="532" fill="#475569" font-size="13">Bloom rastreável (RF21) e</text>
+    <text x="960" y="552" fill="#475569" font-size="13">reparametrização (RF22).</text>
+  </g>
+  <text x="640" y="770" fill="#94a3b8" font-size="13" text-anchor="middle">Endo-DSL · jogos educacionais endógenos · PESC/COPPE/UFRJ</text>
+</svg>
