@@ -124,17 +124,81 @@ if(typeof ENDOUI==='undefined'){{
 # --------------------------------------------------------------------------- #
 # Home
 # --------------------------------------------------------------------------- #
-def home_page(stats: Dict[str, Any]) -> str:
+def home_page(stats: Dict[str, Any],
+              prototypes: List[Dict[str, Any]] | None = None) -> str:
+    # --- menu de módulos: caminhos guiados + módulos individuais ----------- #
+    full_flows = [
+        ("/studio", "🎓", "Estúdio de Design — fluxo completo",
+         "As 6 fases guiadas: contexto → recuperação (RAG) → geração da DSL → "
+         "revisão → compilação HTML5 → avaliação. O caminho recomendado de ponta a ponta.",
+         "Abrir o Estúdio"),
+        ("/gdc", "🗂️", "ENDO-GDC Canvas — do canvas ao jogo",
+         "Preencha o canvas de design (8 seções pedagógicas), escolha o tipo de jogo "
+         "e gere o protótipo de tabuleiro jogável sem escrever código.",
+         "Abrir o Canvas"),
+        ("/builder", "🧱", "Construtor de Blocos — MDA",
+         "Monte o jogo combinando blocos de Mecânicas (59), Dinâmicas (52) e "
+         "Estéticas (55), desenhe o fluxo no editor BPMN e gere o jogo.",
+         "Abrir o Construtor"),
+    ]
+    modules = [
+        ("/studio", "✍️", "Editor DSL", "Escreva ou cole código .endo com validação ao vivo e compile direto (fase 4 do Estúdio)."),
+        ("/library", "📚", "Biblioteca", "Componentes pedagógicos versionados, busca multifacetada por Bloom, tipo e domínio."),
+        ("/curator", "🔍", "Curadoria", "Fila de aprovação de componentes: canônico, experimental ou rejeitado."),
+        ("/report", "📊", "Relatórios", "Avaliação 7-D e comparação automático × manual dos protótipos."),
+        ("/docs", "📖", "Gramática", "Referência completa da DSL: gramática EBNF, limites e níveis de Bloom."),
+    ]
+    flow_cards = "".join(f"""
+  <div class="card home-flow">
+    <div class="home-icon">{icon}</div>
+    <h3>{esc(title)}</h3>
+    <p>{esc(desc)}</p>
+    <a class="btn" href="{href}">{esc(cta)} &#8594;</a>
+  </div>""" for href, icon, title, desc, cta in full_flows)
+    mod_cards = "".join(f"""
+  <a class="card home-module" href="{href}">
+    <div class="home-icon sm">{icon}</div>
+    <h4>{esc(title)}</h4>
+    <p>{esc(desc)}</p>
+  </a>""" for href, icon, title, desc in modules)
+
+    # --- meus jogos: jogar e exportar HTML independente --------------------- #
+    games_rows = ""
+    for pr in (prototypes or [])[:10]:
+        pid = pr["id"]
+        title = pr.get("title") or f"Protótipo {pid}"
+        created = str(pr.get("created_at") or "")[:16].replace("T", " ")
+        games_rows += f"""
+    <tr>
+      <td><b>{esc(title)}</b><br><span class="small muted">{esc(created)}</span></td>
+      <td class="home-game-actions">
+        <a class="btn sm" href="/boardgame/{pid}" target="_blank">&#9654; Jogar</a>
+        <a class="btn ghost sm" href="/boardgame/{pid}/download"
+           title="Baixa um arquivo HTML único, jogável offline em qualquer navegador,
+sem depender desta plataforma.">&#11015; Exportar HTML</a>
+      </td>
+    </tr>"""
+    games_section = f"""
+<section class="card" style="margin-top:1rem">
+  <h3>🎮 Meus jogos gerados</h3>
+  <p class="muted small">Cada jogo exportado é um arquivo HTML único e auto-contido
+     (CSS + JS + conteúdo embutidos, zero dependências externas): abra em qualquer
+     navegador, envie por e-mail ou hospede onde quiser — funciona offline,
+     independente desta plataforma.</p>
+  <table class="home-games"><tbody>{games_rows}</tbody></table>
+</section>""" if games_rows else """
+<section class="card" style="margin-top:1rem">
+  <h3>🎮 Meus jogos gerados</h3>
+  <p class="muted">Nenhum jogo ainda. Gere o primeiro pelo Estúdio, pelo Canvas GDC
+     ou pelo Construtor de Blocos — depois jogue ou exporte o HTML auto-contido aqui.</p>
+</section>"""
+
     body = f"""
 <section class="hero">
   <h1>Design e geração automática de jogos educacionais endógenos</h1>
   <p>Uma DSL formal com a Taxonomia de Bloom como construto de primeira classe,
-     uma biblioteca de componentes reutilizáveis, um pipeline multi-agente e um
-     compilador para protótipos HTML5 jogáveis.</p>
-  <div class="cta">
-    <a class="btn lg" href="/studio">&#9654; Abrir o Estúdio de Design</a>
-    <a class="btn ghost" href="/library">Explorar a Biblioteca</a>
-  </div>
+     blocos MDA configuráveis, pipeline multi-agente e um compilador para
+     protótipos HTML5 jogáveis e exportáveis.</p>
 </section>
 <section class="grid4">
   <div class="stat"><b>{stats['components']}</b><span>componentes</span></div>
@@ -142,22 +206,26 @@ def home_page(stats: Dict[str, Any]) -> str:
   <div class="stat"><b>{stats['prototypes']}</b><span>protótipos</span></div>
   <div class="stat"><b>{esc(stats['backend'])}</b><span>backend LLM</span></div>
 </section>
-<div class="card" style="margin-bottom:1rem">
-  <h3>Início rápido</h3>
-  <p>Defina um objetivo de aprendizagem, recupere componentes da biblioteca,
-     gere uma especificação DSL com IA e compile o protótipo — tudo no Estúdio.</p>
-  <a class="btn" href="/studio">Abrir o Estúdio &#8594;</a>
-</div>
-<section class="cards">
-  <div class="card"><h3>1 &middot; Motor da DSL</h3><p>Gramática formal, parser com erros
-     descritivos (RF03) e validação de coerência cognitiva (RF04).</p></div>
-  <div class="card"><h3>2 &middot; Biblioteca</h3><p>Componentes versionados, com métricas,
-     busca multifacetada (RF09) e curadoria canônico/experimental (RF12).</p></div>
-  <div class="card"><h3>3 &middot; Pipeline multi-agente</h3><p>Recuperação, geração e
-     validação encadeadas, com refinamento iterativo (RF14–RF18).</p></div>
-  <div class="card"><h3>4 &middot; Compilador</h3><p>DSL &rarr; protótipo HTML5 jogável,
-     Bloom rastreável (RF21) e reparametrização de domínio (RF22).</p></div>
-</section>"""
+<h2 class="home-h2">Como você quer criar seu jogo?</h2>
+<section class="cards home-flows">{flow_cards}</section>
+<h2 class="home-h2">Módulos individuais</h2>
+<section class="cards home-modules">{mod_cards}</section>
+{games_section}
+<style>
+.home-h2 {{ margin: 1.4rem 0 .6rem; font-size: 1.15rem; }}
+.home-icon {{ font-size: 1.9rem; }} .home-icon.sm {{ font-size: 1.4rem; }}
+.home-flow {{ display: flex; flex-direction: column; gap: .4rem; }}
+.home-flow .btn {{ margin-top: auto; align-self: flex-start; }}
+.home-module {{ text-decoration: none; color: inherit; display: block;
+  transition: transform .12s, box-shadow .12s; }}
+.home-module:hover {{ transform: translateY(-2px); }}
+.home-module h4 {{ margin: .3rem 0 .2rem; }}
+.home-module p {{ margin: 0; font-size: .82rem; color: var(--muted, #64748b); }}
+.home-games {{ width: 100%; border-collapse: collapse; }}
+.home-games td {{ padding: .5rem .3rem; border-top: 1px solid var(--border, #e2e8f0); }}
+.home-game-actions {{ text-align: right; white-space: nowrap; }}
+.home-game-actions .btn {{ margin-left: .35rem; }}
+</style>"""
     return layout("Início", body, "/")
 
 
@@ -894,6 +962,7 @@ def builder_page() -> str:
       <button class="btn ghost sm" onclick="BLD.loadJSON()">Carregar</button>
       <button class="btn sm" id="bld-btn-dsl" onclick="BLD.showDSL()">&lt;/&gt; Ver DSL</button>
       <button class="btn primary sm" id="bld-btn-generate" onclick="BLD.generate()">▶ Gerar Jogo</button>
+      <a class="btn ghost sm hidden" id="bld-btn-download" href="#" title="Baixa o jogo como HTML único, jogável offline">⬇ Exportar jogo</a>
     </div>
   </div>
 

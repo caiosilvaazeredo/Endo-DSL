@@ -109,3 +109,4 @@
 @media (max-width: 900px) {
   .bld-meta { grid-template-columns: repeat(2, 1fr); }
 }
+.hidden { display: none !important; }

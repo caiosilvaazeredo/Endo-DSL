@@ -77,7 +77,7 @@ def home(p: Platform, m, q, body) -> Response:
         "prototypes": len(p.list_prototypes()),
         "backend": p.backend.name,
     }
-    return _html(views.home_page(stats))
+    return _html(views.home_page(stats, prototypes=p.list_prototypes()))
 
 
 @route("GET", "/studio")
@@ -374,6 +374,22 @@ def serve_boardgame(p: Platform, m, q, body) -> Response:
         return _html(views.not_found("Jogo não encontrado"), 404)
 
 
+@route("GET", "/boardgame/<bid>/download")
+def download_boardgame(p: Platform, m, q, body) -> Response:
+    """Exporta o jogo como arquivo HTML único, auto-contido e jogável offline."""
+    import re as _re
+    row = p.db.query_one("SELECT title, html_path FROM prototypes WHERE id = ?",
+                         (int(m["bid"]),))
+    if not row or not row["html_path"] or not Path(row["html_path"]).exists():
+        return _html(views.not_found("Jogo não encontrado"), 404)
+    html_bytes = Path(row["html_path"]).read_bytes()
+    slug = _re.sub(r"[^A-Za-z0-9_-]+", "-", str(row["title"] or "jogo")).strip("-") or "jogo"
+    return (200,
+            "text/html; charset=utf-8",
+            html_bytes,
+            {"Content-Disposition": f'attachment; filename="{slug}-endo-dsl.html"'})
+
+
 @route("POST", "/api/boardgame/compile-dsl")
 def api_boardgame_compile_dsl(p: Platform, m, q, body) -> Response:
     try:
@@ -423,10 +439,13 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def _send(self, resp: Response) -> None:
-        status, ctype, body = resp
+        status, ctype, body = resp[0], resp[1], resp[2]
+        extra_headers = resp[3] if len(resp) > 3 else {}
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        for k, v in extra_headers.items():
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 

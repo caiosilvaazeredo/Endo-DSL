@@ -316,7 +316,12 @@ const BLD = {
         body: JSON.stringify({ config: cfg }),
       });
       const data = await resp.json();
-      if (data.ok && data.html_url) window.open(data.html_url, '_blank');
+      if (data.ok && data.html_url) {
+        const dl = document.getElementById('bld-btn-download');
+        dl.href = data.html_url + '/download';
+        dl.classList.remove('hidden');
+        window.open(data.html_url, '_blank');
+      }
       else alert('Erro: ' + (data.error || JSON.stringify(data)));
     } catch (e) { alert('Falha: ' + e.message); }
     finally { btn.disabled = false; btn.textContent = '▶ Gerar Jogo'; }
